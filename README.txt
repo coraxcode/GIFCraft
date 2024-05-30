@@ -64,6 +64,7 @@ Save: Ctrl+S
 Save As: Ctrl+Shift+S
 Add Image: (No shortcut)
 Delete Frame(s): Delete
+View Frames: Arrow Left and Arrow Right
 Move Frame Up: Arrow Up
 Move Frame Down: Arrow Down
 Play/Stop Animation: Space
