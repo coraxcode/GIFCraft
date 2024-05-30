@@ -16,7 +16,7 @@ Installation
 
 Clone the repository:
 
-git clone https://github.com/seehrum/GIFCraft.git
+git clone https://github.com/coraxcode/GIFCraft.git
 
 Navigate to the project directory:
 
