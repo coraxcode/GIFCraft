@@ -179,7 +179,7 @@ class GIFEditor:
             with Image.open(file_path) as img:
                 for frame in ImageSequence.Iterator(img):
                     self.frames.append(self.center_image(self.resize_image(frame.copy())))
-                    delay = frame.info.get('duration', 100)
+                    delay = int(frame.info.get('duration', 100))  # Ensure delay is always an integer
                     self.delays.append(delay)
                     var = IntVar()
                     var.trace_add('write', lambda *args, i=len(self.checkbox_vars): self.set_current_frame(i))
