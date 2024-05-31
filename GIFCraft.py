@@ -226,6 +226,7 @@ class GIFEditor:
                     var = IntVar()
                     var.trace_add('write', lambda *args, i=len(self.checkbox_vars): self.set_current_frame(i))
                     self.checkbox_vars.append(var)
+            self.resize_all_frames()  # Resize all frames to the largest size
             self.frame_index = 0
             self.update_frame_list()
             self.show_frame()
@@ -233,6 +234,13 @@ class GIFEditor:
             self.update_title()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load file: {e}")
+
+    def resize_all_frames(self):
+        """Resize all frames to the largest frame size."""
+        max_width = max(frame.width for frame in self.frames)
+        max_height = max(frame.height for frame in self.frames)
+        for i, frame in enumerate(self.frames):
+            self.frames[i] = self.center_image(frame.resize((max_width, max_height), Image.Resampling.LANCZOS))
 
     def resize_image(self, image, max_width=800, max_height=600):
         """Resize the image to fit within the specified max width and height."""
@@ -268,6 +276,8 @@ class GIFEditor:
                 var = IntVar()
                 var.trace_add('write', lambda *args, i=len(self.checkbox_vars): self.set_current_frame(i))
                 self.checkbox_vars.append(var)
+            
+            self.resize_all_frames()  # Resize all frames to the largest size
             self.update_frame_list()
             self.show_frame()
         except Exception as e:
