@@ -47,6 +47,7 @@ class GIFEditor:
         self.create_file_menu()
         self.create_edit_menu()
         self.create_animation_menu()
+        self.create_help_menu()  # Add this line to include the Help menu
         self.master.config(menu=self.menu_bar)
 
     def create_file_menu(self):
@@ -82,6 +83,12 @@ class GIFEditor:
         animation_menu = Menu(self.menu_bar, tearoff=0)
         animation_menu.add_command(label="Play/Stop Animation", command=self.toggle_play_pause, accelerator="Space")
         self.menu_bar.add_cascade(label="Animation", menu=animation_menu)
+
+    def create_help_menu(self):
+        """Create the Help menu."""
+        help_menu = Menu(self.menu_bar, tearoff=0)
+        help_menu.add_command(label="About", command=self.show_about)  # Add this line to create the About menu item
+        self.menu_bar.add_cascade(label="Help", menu=help_menu)
 
     def setup_frame_list(self):
         """Set up the frame list with scrollbar."""
@@ -478,6 +485,10 @@ class GIFEditor:
         if self.checkbox_vars:
             current_var = self.checkbox_vars[self.frame_index]
             current_var.set(0 if current_var.get() else 1)
+
+    def show_about(self):
+        """Display the About dialog."""
+        messagebox.showinfo("About GIFCraft", "GIFCraft - GIF Editor\nVersion 1.0\n© 2024 by Seehrum")
 
 def main():
     root = tk.Tk()
