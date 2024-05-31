@@ -108,6 +108,9 @@ class GIFEditor:
         self.dimension_label = tk.Label(self.control_frame, text="", font=("Arial", 8), fg="grey")
         self.dimension_label.pack(pady=5)
 
+        self.total_duration_label = tk.Label(self.control_frame, text="", font=("Arial", 8), fg="grey")
+        self.total_duration_label.pack(pady=5)
+
         self.delay_label = tk.Label(self.control_frame, text="Frame Delay (ms):")
         self.delay_label.pack(pady=5)
 
@@ -264,11 +267,14 @@ class GIFEditor:
             self.delay_entry.delete(0, tk.END)
             self.delay_entry.insert(0, str(self.delays[self.frame_index]))
             self.dimension_label.config(text=f"Size: {frame.width}x{frame.height}")  # Show frame dimensions
+            total_duration = sum(self.delays)
+            self.total_duration_label.config(text=f"Total Duration: {total_duration} ms")  # Show total duration
         else:
             self.image_label.config(image='', text="No frames to display")
             self.image_label.image = None
             self.delay_entry.delete(0, tk.END)
             self.dimension_label.config(text="")  # Clear frame dimensions
+            self.total_duration_label.config(text="")  # Clear total duration
         self.update_frame_list()  # Refresh the frame list to show the current frame indicator
 
     def delete_frames(self, event=None):
