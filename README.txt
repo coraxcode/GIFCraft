@@ -59,6 +59,7 @@ Extract all frames to individual images using File > Extract Frames.
 
 Keyboard Shortcuts
 
+New: Ctrl+N
 Load File: Ctrl+O
 Save: Ctrl+S
 Save As: Ctrl+Shift+S
