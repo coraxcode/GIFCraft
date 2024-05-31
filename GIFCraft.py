@@ -53,6 +53,7 @@ class GIFEditor:
     def create_file_menu(self):
         """Create the File menu."""
         file_menu = Menu(self.menu_bar, tearoff=0)
+        file_menu.add_command(label="New", command=self.new_file, accelerator="Ctrl+N")  # Add this line
         file_menu.add_command(label="Load GIF/PNG/WebP", command=self.load_file, accelerator="Ctrl+O")
         file_menu.add_separator()
         file_menu.add_command(label="Save", command=self.save, accelerator="Ctrl+S")
@@ -143,6 +144,8 @@ class GIFEditor:
 
     def bind_keyboard_events(self):
         """Bind keyboard events for navigating frames."""
+        self.master.bind("<Control-n>", self.new_file)
+        self.master.bind("<Control-N>", self.new_file)    
         self.master.bind("<Control-o>", self.load_file)
         self.master.bind("<Control-O>", self.load_file)
         self.master.bind("<Left>", self.previous_frame)
@@ -178,6 +181,28 @@ class GIFEditor:
         if self.frame_index < len(self.frames) - 1:
             self.frame_index += 1
             self.show_frame()
+
+    def new_file(self, event=None):
+        """Create a new file, prompting to save unsaved changes if any."""
+        if self.frames:
+            response = messagebox.askyesnocancel("Unsaved Changes",
+                                                 "Do you want to save the current file before creating a new one?")
+            if response:  # Yes
+                self.save()
+                if self.frames:  # If saving was cancelled or failed, do not proceed
+                    return
+            elif response is None:  # Cancel
+                return
+
+        # Reset the editor state for a new file
+        self.frames = []
+        self.delays = []
+        self.checkbox_vars = []
+        self.current_file = None
+        self.frame_index = 0
+        self.update_frame_list()
+        self.show_frame()
+        self.update_title()
 
     def load_file(self, event=None):
         """Load a GIF, PNG, or WebP file and extract its frames."""
