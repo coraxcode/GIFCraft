@@ -250,23 +250,43 @@ class GIFEditor:
 
     def update_frame_list(self):
         """Update the listbox with the current frames and their delays."""
+        # Destroy existing widgets
         for widget in self.frame_list.winfo_children():
             widget.destroy()
 
-        for i, (delay, var) in enumerate(zip(self.delays, self.checkbox_vars)):
-            frame = Frame(self.frame_list)
-            frame.pack(fill=tk.X)
-            checkbox = Checkbutton(frame, variable=var)
-            checkbox.pack(side=tk.LEFT)
-            
-            # Add an arrow to indicate the current frame
-            if i == self.frame_index:
-                label = tk.Label(frame, text=f"→ Frame {i + 1}: {delay} ms")
-            else:
-                label = tk.Label(frame, text=f"Frame {i + 1}: {delay} ms")
-            label.pack(side=tk.LEFT, fill=tk.X)
+        # If there are no frames, display a message
+        if not self.frames:
+            label = tk.Label(self.frame_list, text="No frames available")
+            label.pack()
+            self.canvas.config(scrollregion=self.canvas.bbox("all"))
+            return
+
+        # Batch update the frame list
+        batch_size = 100  # Adjust the batch size if necessary
+        total_batches = (len(self.frames) + batch_size - 1) // batch_size
+
+        for batch in range(total_batches):
+            start_index = batch * batch_size
+            end_index = min((batch + 1) * batch_size, len(self.frames))
+
+            for i in range(start_index, end_index):
+                delay = self.delays[i]
+                var = self.checkbox_vars[i]
+                frame = Frame(self.frame_list)
+                frame.pack(fill=tk.X)
+                checkbox = Checkbutton(frame, variable=var)
+                checkbox.pack(side=tk.LEFT)
+                
+                # Add an arrow to indicate the current frame
+                if i == self.frame_index:
+                    label = tk.Label(frame, text=f"→ Frame {i + 1}: {delay} ms")
+                else:
+                    label = tk.Label(frame, text=f"Frame {i + 1}: {delay} ms")
+                label.pack(side=tk.LEFT, fill=tk.X)
 
         self.canvas.config(scrollregion=self.canvas.bbox("all"))
+
+
 
     def set_current_frame(self, index):
         """Set the current frame to the one corresponding to the clicked checkbox."""
@@ -458,6 +478,7 @@ class GIFEditor:
             self.update_frame_list()
             self.show_frame()
             self.update_title()
+            self.check_all.set(False)  # Reset the check_all variable to ensure consistency
 
     def redo(self, event=None):
         """Redo the last undone action."""
@@ -470,6 +491,9 @@ class GIFEditor:
             self.update_frame_list()
             self.show_frame()
             self.update_title()
+            self.check_all.set(False)  # Reset the check_all variable to ensure consistency
+
+
 
     def toggle_check_all(self):
         """Toggle all checkboxes in the frame list."""
