@@ -166,6 +166,8 @@ class GIFEditor:
         self.master.bind("X", self.toggle_checkbox)
         self.master.bind("a", self.toggle_check_all)
         self.master.bind("A", self.toggle_check_all)
+        self.master.bind("d", self.focus_delay_entry)  # Add this line
+        self.master.bind("D", self.focus_delay_entry)
 
     def toggle_play_pause(self, event=None):
         """Toggle play/pause for the animation."""
@@ -491,6 +493,10 @@ class GIFEditor:
             self.update_frame_list()
         except ValueError:
             messagebox.showerror("Invalid Input", "Please enter a valid integer for delay.")
+
+    def focus_delay_entry(self, event=None):
+        """Set focus to the delay entry field."""
+        self.delay_entry.focus_set()
 
     def save(self, event=None):
         """Save the current frames and delays to a GIF file."""
