@@ -3,7 +3,6 @@ from tkinter import filedialog, messagebox, Frame, Canvas, Menu, Checkbutton, In
 from PIL import Image, ImageTk, ImageSequence
 import os
 
-
 class GIFEditor:
     def __init__(self, master):
         """Initialize the GIF editor with the main window and UI setup."""
@@ -562,7 +561,6 @@ class GIFEditor:
             self.update_title()
             self.check_all.set(False)  # Reset the check_all variable to ensure consistency
 
-
     def redo(self, event=None):
         """Redo the last undone action."""
         if self.redo_stack:
@@ -595,7 +593,6 @@ class GIFEditor:
         """Display the About dialog."""
         messagebox.showinfo("About GIFCraft", "GIFCraft - GIF Editor\nVersion 1.0\n© 2024 by Seehrum")
 
-
 def main():
     """Main function to initialize the GIF editor."""
     root = tk.Tk()
@@ -605,7 +602,6 @@ def main():
     except KeyboardInterrupt:
         print("Program interrupted with Ctrl+C")
         root.destroy()
-
 
 if __name__ == "__main__":
     main()
