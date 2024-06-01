@@ -74,6 +74,7 @@ Redo: Ctrl+Y
 Check/Uncheck All: A
 Toggle Checkbox of Current Frame: X
 Apply 'Set Frame Delay' value: ENTER
+View cursor in frame list: D
 
 License
 
