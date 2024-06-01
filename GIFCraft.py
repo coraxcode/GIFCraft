@@ -55,6 +55,7 @@ class GIFEditor:
         file_menu.add_command(label="Load GIF/PNG/WebP", command=self.load_file, accelerator="Ctrl+O")
         file_menu.add_separator()
         file_menu.add_command(label="Save", command=self.save, accelerator="Ctrl+S")
+        file_menu.add_command(label="Save As High Quality GIF", command=self.save_as_high_quality_gif)
         file_menu.add_command(label="Save As", command=self.save_as, accelerator="Ctrl+Shift+S")
         file_menu.add_separator()
         file_menu.add_command(label="Extract Frames", command=self.extract_frames)
@@ -494,6 +495,19 @@ class GIFEditor:
             self.save_to_file(self.current_file)
         else:
             self.save_as()
+
+    def save_as_high_quality_gif(self):
+        """Save the current frames and delays to a high-quality GIF file using dithering."""
+        file_path = filedialog.asksaveasfilename(defaultextension=".gif", filetypes=[("GIF files", "*.gif")])
+        if file_path:
+            try:
+                images = [frame.convert("RGB").quantize(method=0) for frame in self.frames]
+                images[0].save(file_path, save_all=True, append_images=images[1:], duration=self.delays, loop=0, dither=Image.NONE)
+                self.current_file = file_path
+                self.update_title()
+                messagebox.showinfo("Success", "High-quality GIF saved successfully!")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to save high-quality GIF: {e}")
 
     def save_as(self, event=None):
         """Save the current frames and delays to a file with the selected format."""
