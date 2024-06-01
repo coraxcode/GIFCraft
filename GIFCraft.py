@@ -28,10 +28,8 @@ class GIFEditor:
     def update_title(self):
         """Update the window title to reflect the current file state."""
         if self.frames:
-            if self.current_file:
-                self.master.title(f"GIFCraft - GIF Editor - {os.path.basename(self.current_file)}")
-            else:
-                self.master.title("GIFCraft - GIF Editor - Unsaved File")
+            title = f"GIFCraft - GIF Editor - {os.path.basename(self.current_file)}" if self.current_file else "GIFCraft - GIF Editor - Unsaved File"
+            self.master.title(title)
         else:
             self.master.title("GIFCraft - GIF Editor")
 
@@ -145,7 +143,7 @@ class GIFEditor:
     def bind_keyboard_events(self):
         """Bind keyboard events for navigating frames."""
         self.master.bind("<Control-n>", self.new_file)
-        self.master.bind("<Control-N>", self.new_file)    
+        self.master.bind("<Control-N>", self.new_file)
         self.master.bind("<Control-o>", self.load_file)
         self.master.bind("<Control-O>", self.load_file)
         self.master.bind("<Left>", self.previous_frame)
@@ -271,17 +269,29 @@ class GIFEditor:
         try:
             for file_path in file_paths:
                 with Image.open(file_path) as image:
-                    self.frames.append(self.center_image(self.resize_image(image.copy())))
+                    # Resize and center the new image to match the maximum dimensions
+                    image = self.center_image(self.resize_to_max_dimensions(image.copy()))
+                    self.frames.append(image)
                 self.delays.append(100)  # Default delay for added images
                 var = IntVar()
                 var.trace_add('write', lambda *args, i=len(self.checkbox_vars): self.set_current_frame(i))
                 self.checkbox_vars.append(var)
             
-            self.resize_all_frames()  # Resize all frames to the largest size
             self.update_frame_list()
             self.show_frame()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to add images: {e}")
+
+    def resize_to_max_dimensions(self, image):
+        """Resize the image to the maximum dimensions of the current frames."""
+        if not self.frames:
+            return image  # If no frames, return the image as is
+
+        max_width = max(frame.width for frame in self.frames)
+        max_height = max(frame.height for frame in self.frames)
+        
+        # Resize the image to exactly max_width and max_height
+        return image.resize((max_width, max_height), Image.Resampling.LANCZOS)
 
     def update_frame_list(self):
         """Update the listbox with the current frames and their delays."""
@@ -320,8 +330,6 @@ class GIFEditor:
                 label.pack(side=tk.LEFT, fill=tk.X)
 
         self.canvas.config(scrollregion=self.canvas.bbox("all"))
-
-
 
     def set_current_frame(self, index):
         """Set the current frame to the one corresponding to the clicked checkbox."""
@@ -501,7 +509,6 @@ class GIFEditor:
         self.history.append((self.frames.copy(), self.delays.copy(), [var.get() for var in self.checkbox_vars], self.frame_index, self.current_file))
         self.redo_stack.clear()  # Clear the redo stack on new action
 
-
     def undo(self, event=None):
         """Undo the last action."""
         if self.history:
@@ -527,8 +534,6 @@ class GIFEditor:
             self.show_frame()
             self.update_title()
             self.check_all.set(False)  # Reset the check_all variable to ensure consistency
-
-
 
     def toggle_check_all(self):
         """Toggle all checkboxes in the frame list."""
