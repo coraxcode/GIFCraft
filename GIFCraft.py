@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, Frame, Canvas, Menu, Checkbutton, IntVar, Scrollbar
+from tkinter import filedialog, messagebox, Menu, Checkbutton, IntVar, Scrollbar
 from PIL import Image, ImageTk, ImageSequence
 import os
 
@@ -10,7 +10,6 @@ class GIFEditor:
         self.master.title("GIFCraft - GIF Editor")
         self.master.geometry("800x600")
 
-        # Initial settings
         self.frame_index = 0
         self.frames = []
         self.delays = []
@@ -19,9 +18,8 @@ class GIFEditor:
         self.redo_stack = []
         self.current_file = None
         self.checkbox_vars = []
-        self.check_all = tk.BooleanVar(value=False)  # Variable to keep track of check/uncheck state
+        self.check_all = tk.BooleanVar(value=False)
 
-        # Setup UI and bindings
         self.setup_ui()
         self.bind_keyboard_events()
 
@@ -94,28 +92,28 @@ class GIFEditor:
 
     def setup_frame_list(self):
         """Set up the frame list with scrollbar."""
-        self.frame_list_frame = Frame(self.master)
+        self.frame_list_frame = tk.Frame(self.master)
         self.frame_list_frame.pack(side=tk.LEFT, fill=tk.Y)
 
         self.scrollbar = Scrollbar(self.frame_list_frame)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.canvas = Canvas(self.frame_list_frame, yscrollcommand=self.scrollbar.set)
+        self.canvas = tk.Canvas(self.frame_list_frame, yscrollcommand=self.scrollbar.set)
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.scrollbar.config(command=self.canvas.yview)
 
-        self.frame_list = Frame(self.canvas)
+        self.frame_list = tk.Frame(self.canvas)
         self.canvas.create_window((0, 0), window=self.frame_list, anchor='nw')
 
     def setup_control_frame(self):
         """Set up the control frame with image display."""
-        self.control_frame_canvas = Canvas(self.master)
+        self.control_frame_canvas = tk.Canvas(self.master)
         self.control_frame_canvas.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
         self.control_frame_scrollbar = Scrollbar(self.control_frame_canvas, orient="vertical", command=self.control_frame_canvas.yview)
         self.control_frame_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.control_frame = Frame(self.control_frame_canvas)
+        self.control_frame = tk.Frame(self.control_frame_canvas)
         self.control_frame_canvas.create_window((0, 0), window=self.control_frame, anchor='nw')
 
         self.control_frame_canvas.config(yscrollcommand=self.control_frame_scrollbar.set)
@@ -139,7 +137,6 @@ class GIFEditor:
         self.delay_button = tk.Button(self.control_frame, text="Set Frame Delay", command=self.set_delay)
         self.delay_button.pack(pady=5)
 
-        # Play/Stop button with an indicator
         self.play_button = tk.Button(self.control_frame, text="Play", command=self.toggle_play_pause)
         self.play_button.pack(pady=5)
 
@@ -147,9 +144,7 @@ class GIFEditor:
         """Bind keyboard events for navigating frames."""
         self.delay_entry.bind("<Return>", self.set_delay)
         self.master.bind("<Control-n>", self.new_file)
-        self.master.bind("<Control-N>", self.new_file)
         self.master.bind("<Control-o>", self.load_file)
-        self.master.bind("<Control-O>", self.load_file)
         self.master.bind("<Left>", self.previous_frame)
         self.master.bind("<Right>", self.next_frame)
         self.master.bind("<Up>", self.move_frame_up)
@@ -157,17 +152,10 @@ class GIFEditor:
         self.master.bind("<Delete>", self.delete_frames)
         self.master.bind("<space>", self.toggle_play_pause)
         self.master.bind("<Control-z>", self.undo)
-        self.master.bind("<Control-Z>", self.undo)
         self.master.bind("<Control-y>", self.redo)
-        self.master.bind("<Control-Y>", self.redo)
         self.master.bind("<Control-s>", self.save)
-        self.master.bind("<Control-S>", self.save_as)
-        self.master.bind("x", self.toggle_checkbox)
-        self.master.bind("X", self.toggle_checkbox)
         self.master.bind("a", self.toggle_check_all)
-        self.master.bind("A", self.toggle_check_all)
-        self.master.bind("d", self.focus_delay_entry)  # Add this line
-        self.master.bind("D", self.focus_delay_entry)
+        self.master.bind("d", self.focus_delay_entry)
 
     def toggle_play_pause(self, event=None):
         """Toggle play/pause for the animation."""
@@ -191,8 +179,7 @@ class GIFEditor:
     def new_file(self, event=None):
         """Create a new file, prompting to save unsaved changes if any."""
         if self.frames:
-            response = messagebox.askyesnocancel("Unsaved Changes",
-                                                 "Do you want to save the current file before creating a new one?")
+            response = messagebox.askyesnocancel("Unsaved Changes", "Do you want to save the current file before creating a new one?")
             if response:  # Yes
                 self.save()
                 if self.frames:  # If saving was cancelled or failed, do not proceed
@@ -200,16 +187,7 @@ class GIFEditor:
             elif response is None:  # Cancel
                 return
 
-        # Reset the editor state for a new file
-        self.frames = []
-        self.delays = []
-        self.checkbox_vars = []
-        self.current_file = None
-        self.frame_index = 0
-        self.base_size = None  # Clear the base size
-        self.update_frame_list()
-        self.show_frame()
-        self.update_title()
+        self.reset_editor_state()
 
     def load_file(self, event=None):
         """Load a GIF, PNG, or WebP file and extract its frames."""
@@ -218,19 +196,15 @@ class GIFEditor:
             return
 
         self.save_state()  # Save the state before making changes
-        self.frames = []
-        self.delays = []
-        self.checkbox_vars = []
-        for widget in self.frame_list.winfo_children():
-            widget.destroy()
+        self.reset_frames_and_vars()
 
         try:
             with Image.open(file_path) as img:
                 for i, frame in enumerate(ImageSequence.Iterator(img)):
                     if i == 0:
-                        self.base_size = frame.size  # Store the size of the first frame
+                        self.base_size = frame.size
                     self.frames.append(self.resize_to_base_size(frame.copy()))
-                    delay = int(frame.info.get('duration', 100))  # Ensure delay is always an integer
+                    delay = int(frame.info.get('duration', 100))
                     self.delays.append(delay)
                     var = IntVar()
                     var.trace_add('write', lambda *args, i=len(self.checkbox_vars): self.set_current_frame(i))
@@ -284,7 +258,7 @@ class GIFEditor:
             if hasattr(self, 'base_size'):
                 new_width, new_height = self.base_size
             else:
-                return  # If no dimensions provided and no base size, do nothing
+                return
 
         self.save_state()  # Save the state before making changes
         for i, frame in enumerate(self.frames):
@@ -311,12 +285,11 @@ class GIFEditor:
         try:
             for file_path in file_paths:
                 with Image.open(file_path) as image:
-                    # Resize the new image to match the base dimensions
-                    if not self.frames:  # If no frames, set the base size to the first image's size
+                    if not self.frames:
                         self.base_size = image.size
                     image = self.resize_to_base_size(image.copy())
                     self.frames.append(image)
-                self.delays.append(100)  # Default delay for added images
+                self.delays.append(100)
                 var = IntVar()
                 var.trace_add('write', lambda *args, i=len(self.checkbox_vars): self.set_current_frame(i))
                 self.checkbox_vars.append(var)
@@ -329,50 +302,35 @@ class GIFEditor:
     def resize_to_max_dimensions(self, image):
         """Resize the image to the maximum dimensions of the current frames."""
         if not self.frames:
-            return image  # If no frames, return the image as is
+            return image
 
         max_width = max(frame.width for frame in self.frames)
         max_height = max(frame.height for frame in self.frames)
-        
-        # Resize the image to exactly max_width and max_height
         return image.resize((max_width, max_height), Image.Resampling.LANCZOS)
 
     def update_frame_list(self):
         """Update the listbox with the current frames and their delays."""
-        # Destroy existing widgets
         for widget in self.frame_list.winfo_children():
             widget.destroy()
 
-        # If there are no frames, display a message
         if not self.frames:
             label = tk.Label(self.frame_list, text="No frames available")
             label.pack()
             self.canvas.config(scrollregion=self.canvas.bbox("all"))
             return
 
-        # Batch update the frame list
-        batch_size = 100  # Adjust the batch size if necessary
-        total_batches = (len(self.frames) + batch_size - 1) // batch_size
+        for i, (frame, delay) in enumerate(zip(self.frames, self.delays)):
+            var = self.checkbox_vars[i]
+            bg_color = 'gray' if i == self.frame_index else self.master.cget('bg')
+            frame_widget = tk.Frame(self.frame_list, bg=bg_color)
+            frame_widget.pack(fill=tk.X)
+            checkbox = Checkbutton(frame_widget, variable=var, bg=bg_color)
+            checkbox.pack(side=tk.LEFT)
+            label_text = f"→ Frame {i + 1}: {delay} ms" if i == self.frame_index else f"Frame {i + 1}: {delay} ms"
+            label = tk.Label(frame_widget, text=label_text, bg=bg_color)
+            label.pack(side=tk.LEFT, fill=tk.X)
 
-        for batch in range(total_batches):
-            start_index = batch * batch_size
-            end_index = min((batch + 1) * batch_size, len(self.frames))
-
-            for i in range(start_index, end_index):
-                delay = self.delays[i]
-                var = self.checkbox_vars[i]
-                frame = Frame(self.frame_list)
-                frame.pack(fill=tk.X)
-                checkbox = Checkbutton(frame, variable=var)
-                checkbox.pack(side=tk.LEFT)
-                
-                # Add an arrow to indicate the current frame
-                if i == self.frame_index:
-                    label = tk.Label(frame, text=f"→ Frame {i + 1}: {delay} ms")
-                else:
-                    label = tk.Label(frame, text=f"Frame {i + 1}: {delay} ms")
-                label.pack(side=tk.LEFT, fill=tk.X)
-
+        self.canvas.update_idletasks()
         self.canvas.config(scrollregion=self.canvas.bbox("all"))
 
     def set_current_frame(self, index):
@@ -388,19 +346,20 @@ class GIFEditor:
             photo = ImageTk.PhotoImage(preview)
             self.image_label.config(image=photo)
             self.image_label.image = photo
-            self.image_label.config(text='')  # Remove text when showing image
+            self.image_label.config(text='')
             self.delay_entry.delete(0, tk.END)
             self.delay_entry.insert(0, str(self.delays[self.frame_index]))
-            self.dimension_label.config(text=f"Size: {frame.width}x{frame.height}")  # Show frame dimensions
+            self.dimension_label.config(text=f"Size: {frame.width}x{frame.height}")
             total_duration = sum(self.delays)
-            self.total_duration_label.config(text=f"Total Duration: {total_duration} ms")  # Show total duration
+            self.total_duration_label.config(text=f"Total Duration: {total_duration} ms")
         else:
             self.image_label.config(image='', text="No frames to display")
             self.image_label.image = None
             self.delay_entry.delete(0, tk.END)
-            self.dimension_label.config(text="")  # Clear frame dimensions
-            self.total_duration_label.config(text="")  # Clear total duration
-        self.update_frame_list()  # Refresh the frame list to show the current frame indicator
+            self.dimension_label.config(text="")
+            self.total_duration_label.config(text="")
+        self.update_frame_list()
+        self.focus_current_frame()
 
     def delete_frames(self, event=None):
         """Delete the selected frames."""
@@ -420,12 +379,11 @@ class GIFEditor:
             del self.delays[index]
             del self.checkbox_vars[index]
 
-        # Update frame_index to ensure it is within the correct bounds
         if self.frame_index >= len(self.frames):
             self.frame_index = max(0, len(self.frames) - 1)
 
         self.update_frame_list()
-        self.show_frame()  # Update the frame display
+        self.show_frame()
 
     def move_frame_up(self, event=None):
         """Move the selected frames up in the list."""
@@ -433,17 +391,7 @@ class GIFEditor:
         indices_to_move = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
         for i in indices_to_move:
             if i > 0 and i-1 not in indices_to_move:
-                self.frames[i], self.frames[i-1] = self.frames[i-1], self.frames[i]
-                self.delays[i], self.delays[i-1] = self.delays[i-1], self.delays[i]
-                self.checkbox_vars[i].set(0)
-                self.checkbox_vars[i-1].set(1)
-                if i == self.frame_index:
-                    self.frame_index = i - 1
-                elif i - 1 == self.frame_index:
-                    self.frame_index = i
-
-        self.update_frame_list()
-        self.show_frame()  # Update the frame display
+                self.swap_frames(i, i-1)
 
     def move_frame_down(self, event=None):
         """Move the selected frames down in the list."""
@@ -451,17 +399,18 @@ class GIFEditor:
         indices_to_move = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
         for i in reversed(indices_to_move):
             if i < len(self.frames) - 1 and i+1 not in indices_to_move:
-                self.frames[i], self.frames[i+1] = self.frames[i+1], self.frames[i]
-                self.delays[i], self.delays[i+1] = self.delays[i+1], self.delays[i]
-                self.checkbox_vars[i].set(0)
-                self.checkbox_vars[i+1].set(1)
-                if i == self.frame_index:
-                    self.frame_index = i + 1
-                elif i + 1 == self.frame_index:
-                    self.frame_index = i
+                self.swap_frames(i, i+1)
 
-        self.update_frame_list()
-        self.show_frame()  # Update the frame display
+    def swap_frames(self, i, j):
+        """Swap frames and update indexes."""
+        self.frames[i], self.frames[j] = self.frames[j], self.frames[i]
+        self.delays[i], self.delays[j] = self.delays[j], self.delays[i]
+        self.checkbox_vars[i].set(0)
+        self.checkbox_vars[j].set(1)
+        if i == self.frame_index:
+            self.frame_index = j
+        elif j == self.frame_index:
+            self.frame_index = i
 
     def play_animation(self):
         """Play the GIF animation."""
@@ -495,8 +444,16 @@ class GIFEditor:
             messagebox.showerror("Invalid Input", "Please enter a valid integer for delay.")
 
     def focus_delay_entry(self, event=None):
-        """Set focus to the delay entry field."""
+        """Set focus to the delay entry field and scroll to the current frame."""
         self.delay_entry.focus_set()
+        self.focus_current_frame()
+    
+    def focus_current_frame(self):
+        """Ensure the current frame is visible in the frame list."""
+        if self.frame_list.winfo_children():
+            frame_widgets = self.frame_list.winfo_children()
+            current_frame_widget = frame_widgets[self.frame_index]
+            self.canvas.yview_moveto(current_frame_widget.winfo_y() / self.canvas.bbox("all")[3])
 
     def save(self, event=None):
         """Save the current frames and delays to a GIF file."""
@@ -531,7 +488,7 @@ class GIFEditor:
         if self.frames:
             try:
                 _, ext = os.path.splitext(file_path)
-                ext = ext[1:].lower()  # Remove the dot and convert to lowercase
+                ext = ext[1:].lower()
                 if ext == 'gif':
                     self.frames[0].save(file_path, save_all=True, append_images=self.frames[1:], duration=self.delays, loop=0)
                 elif ext == 'png':
@@ -568,38 +525,36 @@ class GIFEditor:
     def save_state(self):
         """Save the current state for undo functionality."""
         self.history.append((self.frames.copy(), self.delays.copy(), [var.get() for var in self.checkbox_vars], self.frame_index, self.current_file))
-        self.redo_stack.clear()  # Clear the redo stack on new action
+        self.redo_stack.clear()
 
     def undo(self, event=None):
         """Undo the last action."""
         if self.history:
             self.redo_stack.append((self.frames.copy(), self.delays.copy(), [var.get() for var in self.checkbox_vars], self.frame_index, self.current_file))
-            self.frames, self.delays, checkbox_states, self.frame_index, self.current_file = self.history.pop()
-            self.checkbox_vars = [IntVar(value=state) for state in checkbox_states]
-            for i, var in enumerate(self.checkbox_vars):
-                var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
-            self.base_size = self.frames[0].size if self.frames else None  # Reset base size based on the remaining frames
-            self.update_frame_list()
-            self.show_frame()
-            self.update_title()
-            self.check_all.set(False)  # Reset the check_all variable to ensure consistency
+            self.restore_state(self.history.pop())
+            self.check_all.set(False)
 
     def redo(self, event=None):
         """Redo the last undone action."""
         if self.redo_stack:
             self.history.append((self.frames.copy(), self.delays.copy(), [var.get() for var in self.checkbox_vars], self.frame_index, self.current_file))
-            self.frames, self.delays, checkbox_states, self.frame_index, self.current_file = self.redo_stack.pop()
-            self.checkbox_vars = [IntVar(value=state) for state in checkbox_states]
-            for i, var in enumerate(self.checkbox_vars):
-                var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
-            self.update_frame_list()
-            self.show_frame()
-            self.update_title()
-            self.check_all.set(False)  # Reset the check_all variable to ensure consistency
+            self.restore_state(self.redo_stack.pop())
+            self.check_all.set(False)
+
+    def restore_state(self, state):
+        """Restore the state of the editor."""
+        self.frames, self.delays, checkbox_states, self.frame_index, self.current_file = state
+        self.checkbox_vars = [IntVar(value=state) for state in checkbox_states]
+        for i, var in enumerate(self.checkbox_vars):
+            var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
+        self.base_size = self.frames[0].size if self.frames else None
+        self.update_frame_list()
+        self.show_frame()
+        self.update_title()
 
     def toggle_check_all(self, event=None):
         """Toggle all checkboxes in the frame list."""
-        self.save_state()  # Save the state before making changes
+        self.save_state()
         new_state = not self.check_all.get()
         self.check_all.set(new_state)
         for var in self.checkbox_vars:
@@ -615,6 +570,26 @@ class GIFEditor:
     def show_about(self):
         """Display the About dialog."""
         messagebox.showinfo("About GIFCraft", "GIFCraft - GIF Editor\nVersion 1.0\n© 2024 by Seehrum")
+
+    def reset_editor_state(self):
+        """Reset the editor to its initial state."""
+        self.frames = []
+        self.delays = []
+        self.checkbox_vars = []
+        self.current_file = None
+        self.frame_index = 0
+        self.base_size = None
+        self.update_frame_list()
+        self.show_frame()
+        self.update_title()
+
+    def reset_frames_and_vars(self):
+        """Reset frames and associated variables."""
+        self.frames = []
+        self.delays = []
+        self.checkbox_vars = []
+        for widget in self.frame_list.winfo_children():
+            widget.destroy()
 
 def main():
     """Main function to initialize the GIF editor."""
