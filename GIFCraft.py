@@ -399,16 +399,28 @@ class GIFEditor:
         self.save_state()  # Save the state before making changes
         indices_to_move = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
         for i in indices_to_move:
-            if i > 0 and i-1 not in indices_to_move:
-                self.swap_frames(i, i-1)
+            if i > 0 and i - 1 not in indices_to_move:
+                self.swap_frames(i, i - 1)
+                if i == self.frame_index:
+                    self.frame_index = i - 1
+                elif i - 1 == self.frame_index:
+                    self.frame_index = i
+
+        self.show_frame()
 
     def move_frame_down(self, event=None):
         """Move the selected frames down in the list."""
         self.save_state()  # Save the state before making changes
         indices_to_move = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
         for i in reversed(indices_to_move):
-            if i < len(self.frames) - 1 and i+1 not in indices_to_move:
-                self.swap_frames(i, i+1)
+            if i < len(self.frames) - 1 and i + 1 not in indices_to_move:
+                self.swap_frames(i, i + 1)
+                if i == self.frame_index:
+                    self.frame_index = i + 1
+                elif i + 1 == self.frame_index:
+                    self.frame_index = i
+
+        self.show_frame()
 
     def swap_frames(self, i, j):
         """Swap frames and update indexes."""
