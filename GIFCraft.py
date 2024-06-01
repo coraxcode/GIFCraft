@@ -163,6 +163,8 @@ class GIFEditor:
         self.master.bind("A", self.toggle_check_all)
         self.master.bind("d", self.focus_delay_entry)
         self.master.bind("D", self.focus_delay_entry)
+        self.master.bind("x", self.toggle_checkbox)
+        self.master.bind("X", self.toggle_checkbox)
 
     def toggle_play_pause(self, event=None):
         """Toggle play/pause for the animation."""
