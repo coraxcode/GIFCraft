@@ -144,7 +144,9 @@ class GIFEditor:
         """Bind keyboard events for navigating frames."""
         self.delay_entry.bind("<Return>", self.set_delay)
         self.master.bind("<Control-n>", self.new_file)
+        self.master.bind("<Control-N>", self.new_file)
         self.master.bind("<Control-o>", self.load_file)
+        self.master.bind("<Control-O>", self.load_file)
         self.master.bind("<Left>", self.previous_frame)
         self.master.bind("<Right>", self.next_frame)
         self.master.bind("<Up>", self.move_frame_up)
@@ -152,10 +154,15 @@ class GIFEditor:
         self.master.bind("<Delete>", self.delete_frames)
         self.master.bind("<space>", self.toggle_play_pause)
         self.master.bind("<Control-z>", self.undo)
+        self.master.bind("<Control-Z>", self.undo)
         self.master.bind("<Control-y>", self.redo)
+        self.master.bind("<Control-Y>", self.redo)
         self.master.bind("<Control-s>", self.save)
+        self.master.bind("<Control-S>", self.save)        
         self.master.bind("a", self.toggle_check_all)
+        self.master.bind("A", self.toggle_check_all)
         self.master.bind("d", self.focus_delay_entry)
+        self.master.bind("D", self.focus_delay_entry)
 
     def toggle_play_pause(self, event=None):
         """Toggle play/pause for the animation."""
