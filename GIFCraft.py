@@ -72,7 +72,7 @@ class GIFEditor:
         edit_menu.add_command(label="Move Frame Up", command=self.move_frame_up, accelerator="Arrow Up")
         edit_menu.add_command(label="Move Frame Down", command=self.move_frame_down, accelerator="Arrow Down")
         edit_menu.add_separator()
-        edit_menu.add_command(label="Check/Uncheck All", command=self.toggle_check_all)
+        edit_menu.add_command(label="Check/Uncheck All", command=self.toggle_check_all, accelerator="A")
         edit_menu.add_separator()
         edit_menu.add_command(label="Resize All Frames", command=self.resize_all_frames_dialog)
         edit_menu.add_separator()
