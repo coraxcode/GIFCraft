@@ -65,7 +65,10 @@ class GIFEditor:
         """Create the Edit menu."""
         edit_menu = Menu(self.menu_bar, tearoff=0)
         edit_menu.add_command(label="Add Image", command=self.add_image)
+        edit_menu.add_command(label="Add Empty Frame", command=self.add_empty_frame)
         edit_menu.add_command(label="Delete Frame(s)", command=self.delete_frames, accelerator="Del")
+        edit_menu.add_separator()        
+        edit_menu.add_command(label="Apply Crossfade Effect", command=self.apply_crossfade_effect)
         edit_menu.add_separator()
         edit_menu.add_command(label="Move to Position", command=self.move_frames_to_position)
         edit_menu.add_command(label="Move Frame Up", command=self.move_frame_up, accelerator="Arrow Up")
@@ -79,8 +82,7 @@ class GIFEditor:
         edit_menu.add_command(label="Paste", command=self.paste_frames, accelerator="Ctrl+V")
         edit_menu.add_separator()
         edit_menu.add_command(label="Undo", command=self.undo, accelerator="Ctrl+Z")
-        edit_menu.add_command(label="Redo", command=self.redo, accelerator="Ctrl+Y")
-        edit_menu.add_command(label="Apply Crossfade Effect", command=self.apply_crossfade_effect)    
+        edit_menu.add_command(label="Redo", command=self.redo, accelerator="Ctrl+Y")    
         self.menu_bar.add_cascade(label="Edit", menu=edit_menu)
 
     def create_animation_menu(self):
@@ -338,6 +340,45 @@ class GIFEditor:
             self.show_frame()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to add images: {e}")
+
+    def add_empty_frame(self):
+        """Add an empty frame with optional background color."""
+        if not self.frames:
+            messagebox.showerror("Error", "No frames available to determine the size for the new frame.")
+            return
+
+        # Prompt the user for the background color in hexadecimal format
+        color_code = simpledialog.askstring("Add Empty Frame", "Enter background color (hex code, e.g., #FFFFFF for white):")
+        
+        # Validate and set the color, default to transparent if invalid
+        if color_code and len(color_code) == 7 and color_code[0] == '#':
+            try:
+                # Test the color code by creating a single pixel image
+                Image.new("RGBA", (1, 1), color_code).verify()
+            except ValueError:
+                messagebox.showerror("Invalid Color", "The entered color code is invalid. Using transparent background instead.")
+                color_code = None
+        else:
+            color_code = None
+
+        self.save_state()  # Save the state before making changes
+
+        # Create a new empty frame with the specified or default color
+        try:
+            new_frame = Image.new("RGBA", self.frames[0].size, color_code if color_code else (0, 0, 0, 0))
+        except IndexError as e:
+            messagebox.showerror("Error", f"Failed to create a new frame: {e}")
+            return
+
+        self.frames.append(new_frame)
+        self.delays.append(100)  # Default delay for new frame
+        var = IntVar()
+        var.trace_add('write', lambda *args, i=len(self.checkbox_vars): self.set_current_frame(i))
+        self.checkbox_vars.append(var)
+
+        self.update_frame_list()
+        self.show_frame()
+
 
     def resize_to_max_dimensions(self, image):
         """Resize the image to the maximum dimensions of the current frames."""
