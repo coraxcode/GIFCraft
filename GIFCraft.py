@@ -123,27 +123,41 @@ class GIFEditor:
         self.control_frame_canvas.config(yscrollcommand=self.control_frame_scrollbar.set)
         self.control_frame.bind("<Configure>", lambda e: self.control_frame_canvas.config(scrollregion=self.control_frame_canvas.bbox("all")))
 
-        self.image_label = tk.Label(self.control_frame)
+        # Frame for image display
+        self.image_display_frame = tk.Frame(self.control_frame)
+        self.image_display_frame.grid(row=0, column=0, padx=20, pady=20, sticky='n')
+
+        self.image_label = tk.Label(self.image_display_frame)
         self.image_label.pack()
 
-        self.dimension_label = tk.Label(self.control_frame, text="", font=("Arial", 8), fg="grey")
+        self.dimension_label = tk.Label(self.image_display_frame, text="", font=("Arial", 8), fg="grey")
         self.dimension_label.pack(pady=5)
 
-        self.total_duration_label = tk.Label(self.control_frame, text="", font=("Arial", 8), fg="grey")
+        self.total_duration_label = tk.Label(self.image_display_frame, text="", font=("Arial", 8), fg="grey")
         self.total_duration_label.pack(pady=5)
 
-        self.delay_label = tk.Label(self.control_frame, text="Frame Delay (ms):")
-        self.delay_label.pack(pady=5)
+        # Frame for control inputs
+        self.control_inputs_frame = tk.Frame(self.control_frame)
+        self.control_inputs_frame.grid(row=1, column=0, padx=20, pady=10, sticky='n')
+
+        self.delay_label = tk.Label(self.control_inputs_frame, text="Frame Delay (ms):")
+        self.delay_label.grid(row=0, column=0, pady=5, sticky=tk.E)
 
         vcmd = (self.master.register(self.validate_delay), '%P')
-        self.delay_entry = tk.Entry(self.control_frame, validate='key', validatecommand=vcmd)
-        self.delay_entry.pack(pady=5)
+        self.delay_entry = tk.Entry(self.control_inputs_frame, validate='key', validatecommand=vcmd)
+        self.delay_entry.grid(row=0, column=1, pady=5, padx=5, sticky=tk.W)
 
-        self.delay_button = tk.Button(self.control_frame, text="Set Frame Delay", command=self.set_delay)
-        self.delay_button.pack(pady=5)
+        self.delay_button = tk.Button(self.control_inputs_frame, text="Set Frame Delay", command=self.set_delay)
+        self.delay_button.grid(row=1, column=0, columnspan=2, pady=5)
 
-        self.play_button = tk.Button(self.control_frame, text="Play", command=self.toggle_play_pause)
-        self.play_button.pack(pady=5)
+        self.play_button = tk.Button(self.control_inputs_frame, text="Play", command=self.toggle_play_pause)
+        self.play_button.grid(row=2, column=0, columnspan=2, pady=5)
+
+        # Make sure the window is scrolled to the correct size
+        self.control_frame.update_idletasks()
+        self.control_frame_canvas.config(scrollregion=self.control_frame.bbox("all"))
+
+
     
     def validate_delay(self, new_value):
         """Validate that the delay entry contains only digits."""
