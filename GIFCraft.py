@@ -79,7 +79,8 @@ class GIFEditor:
         edit_menu.add_command(label="Paste", command=self.paste_frames, accelerator="Ctrl+V")
         edit_menu.add_separator()
         edit_menu.add_command(label="Undo", command=self.undo, accelerator="Ctrl+Z")
-        edit_menu.add_command(label="Redo", command=self.redo, accelerator="Ctrl+Y")    
+        edit_menu.add_command(label="Redo", command=self.redo, accelerator="Ctrl+Y")
+        edit_menu.add_command(label="Apply Crossfade Effect", command=self.apply_crossfade_effect)    
         self.menu_bar.add_cascade(label="Edit", menu=edit_menu)
 
     def create_animation_menu(self):
@@ -675,6 +676,59 @@ class GIFEditor:
             self.history.append((self.frames.copy(), self.delays.copy(), [var.get() for var in self.checkbox_vars], self.frame_index, self.current_file))
             self.restore_state(self.redo_stack.pop())
             self.check_all.set(False)
+
+    def apply_crossfade_effect(self):
+        """Apply crossfade effect between checked frames."""
+        checked_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+        
+        if len(checked_indices) < 2:
+            messagebox.showinfo("Info", "Need at least two checked frames to apply crossfade effect.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        crossfade_frames = []
+        crossfade_delays = []
+
+        def blend_frames(frame1, frame2, alpha):
+            """Blend two frames with given alpha."""
+            return Image.blend(frame1, frame2, alpha)
+
+        for idx in range(len(checked_indices) - 1):
+            i = checked_indices[idx]
+            j = checked_indices[idx + 1]
+            
+            frame1 = self.frames[i]
+            frame2 = self.frames[j]
+            crossfade_frames.append(frame1)
+            crossfade_delays.append(self.delays[i])
+            
+            # Generate crossfade frames
+            steps = 10  # Number of steps for the crossfade
+            for step in range(1, steps):
+                alpha = step / float(steps)
+                blended_frame = blend_frames(frame1, frame2, alpha)
+                crossfade_frames.append(blended_frame)
+                crossfade_delays.append(self.delays[i] // steps)
+        
+        # Insert crossfade frames and delays at the correct positions
+        for idx in range(len(checked_indices) - 1, -1, -1):
+            i = checked_indices[idx]
+            self.frames.pop(i)
+            self.delays.pop(i)
+            self.checkbox_vars.pop(i)
+
+        insert_index = checked_indices[0]
+        for frame, delay in zip(crossfade_frames, crossfade_delays):
+            self.frames.insert(insert_index, frame)
+            self.delays.insert(insert_index, delay)
+            var = IntVar(value=1)
+            var.trace_add('write', lambda *args, i=insert_index: self.set_current_frame(i))
+            self.checkbox_vars.insert(insert_index, var)
+            insert_index += 1
+
+        self.update_frame_list()
+        self.show_frame()
 
     def restore_state(self, state):
         """Restore the state of the editor."""
