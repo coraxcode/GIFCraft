@@ -145,6 +145,7 @@ class GIFEditor:
 
     def bind_keyboard_events(self):
         """Bind keyboard events for navigating frames."""
+        self.delay_entry.bind("<Return>", self.set_delay)
         self.master.bind("<Control-n>", self.new_file)
         self.master.bind("<Control-N>", self.new_file)
         self.master.bind("<Control-o>", self.load_file)
@@ -163,6 +164,8 @@ class GIFEditor:
         self.master.bind("<Control-S>", self.save_as)
         self.master.bind("x", self.toggle_checkbox)
         self.master.bind("X", self.toggle_checkbox)
+        self.master.bind("a", self.toggle_check_all)
+        self.master.bind("A", self.toggle_check_all)
 
     def toggle_play_pause(self, event=None):
         """Toggle play/pause for the animation."""
@@ -477,7 +480,7 @@ class GIFEditor:
             self.frame_index = (self.frame_index + 1) % len(self.frames)
             self.master.after(delay, self.play_next_frame)
 
-    def set_delay(self):
+    def set_delay(self, event=None):
         """Set the delay for the selected frames."""
         try:
             delay = int(self.delay_entry.get())
@@ -588,7 +591,7 @@ class GIFEditor:
             self.update_title()
             self.check_all.set(False)  # Reset the check_all variable to ensure consistency
 
-    def toggle_check_all(self):
+    def toggle_check_all(self, event=None):
         """Toggle all checkboxes in the frame list."""
         self.save_state()  # Save the state before making changes
         new_state = not self.check_all.get()
