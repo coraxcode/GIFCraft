@@ -68,6 +68,7 @@ class GIFEditor:
         """Create the Edit menu."""
         edit_menu = Menu(self.menu_bar, tearoff=0)
         edit_menu.add_command(label="Add Image", command=self.add_image)
+        edit_menu.add_command(label="Add Empty Frame", command=self.add_empty_frame)
         edit_menu.add_command(label="Delete Frame(s)", command=self.delete_frames, accelerator="Del")
         edit_menu.add_separator()
         edit_menu.add_command(label="Move Selected Frames", command=self.prompt_and_move_selected_frames)
@@ -242,6 +243,56 @@ class GIFEditor:
             self.show_frame()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to add images: {e}")
+
+    def add_empty_frame(self):
+        """Add an empty frame with an optional background color. If there are no frames, prompt for the size of the new frame."""
+        if not self.frames:
+            # Prompt the user for the width and height if no frames exist
+            width = simpledialog.askinteger("Frame Size", "Enter frame width:", minvalue=1)
+            height = simpledialog.askinteger("Frame Size", "Enter frame height:", minvalue=1)
+            if not width or not height:
+                messagebox.showerror("Invalid Input", "Width and height must be positive integers.")
+                return
+            frame_size = (width, height)
+
+            # Prompt the user for the background color in hexadecimal format
+            color_code = simpledialog.askstring("Add Empty Frame", "Enter background color (hex code, e.g., #FFFFFF for white):")
+        else:
+            # Use the size of the existing frames
+            frame_size = self.frames[0].size
+
+            # Prompt the user for the background color in hexadecimal format
+            color_code = simpledialog.askstring("Add Empty Frame", "Enter background color (hex code, e.g., #FFFFFF for white):")
+
+        # Validate and set the color, default to transparent if invalid
+        if color_code and len(color_code) == 7 and color_code[0] == '#':
+            try:
+                # Test the color code by creating a single pixel image
+                Image.new("RGBA", (1, 1), color_code).verify()
+            except ValueError:
+                messagebox.showerror("Invalid Color", "The entered color code is invalid. Using transparent background instead.")
+                color_code = None
+        else:
+            color_code = None
+
+        self.save_state()  # Save the state before making changes
+
+        # Create a new empty frame with the specified or default color
+        try:
+            new_frame = Image.new("RGBA", frame_size, color_code if color_code else (0, 0, 0, 0))
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to create a new frame: {e}")
+            return
+
+        # Add the new frame to the list of frames
+        self.frames.append(new_frame)
+        self.delays.append(100)  # Default delay for new frame
+        var = IntVar()
+        var.trace_add('write', lambda *args, i=len(self.checkbox_vars): self.set_current_frame(i))
+        self.checkbox_vars.append(var)
+
+        self.update_frame_list()
+        self.show_frame()
 
     def delete_frames(self, event=None):
         """Delete the selected frames."""
