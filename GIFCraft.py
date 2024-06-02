@@ -42,6 +42,7 @@ class GIFEditor:
         self.menu_bar = Menu(self.master)
         self.create_file_menu()
         self.create_edit_menu()
+        self.create_effects_menu()
         self.create_animation_menu()
         self.create_help_menu()
         self.master.config(menu=self.menu_bar)
@@ -67,8 +68,6 @@ class GIFEditor:
         edit_menu.add_command(label="Add Image", command=self.add_image)
         edit_menu.add_command(label="Add Empty Frame", command=self.add_empty_frame)
         edit_menu.add_command(label="Delete Frame(s)", command=self.delete_frames, accelerator="Del")
-        edit_menu.add_separator()        
-        edit_menu.add_command(label="Apply Crossfade Effect", command=self.apply_crossfade_effect)
         edit_menu.add_separator()
         edit_menu.add_command(label="Move to Position", command=self.move_frames_to_position)
         edit_menu.add_command(label="Move Frame Up", command=self.move_frame_up, accelerator="Arrow Up")
@@ -84,6 +83,12 @@ class GIFEditor:
         edit_menu.add_command(label="Undo", command=self.undo, accelerator="Ctrl+Z")
         edit_menu.add_command(label="Redo", command=self.redo, accelerator="Ctrl+Y")    
         self.menu_bar.add_cascade(label="Edit", menu=edit_menu)
+
+    def create_effects_menu(self):
+        """Create the Effects menu."""
+        effects_menu = Menu(self.menu_bar, tearoff=0)
+        effects_menu.add_command(label="Apply Crossfade Effect", command=self.apply_crossfade_effect)
+        self.menu_bar.add_cascade(label="Effects", menu=effects_menu)
 
     def create_animation_menu(self):
         """Create the Animation menu."""
