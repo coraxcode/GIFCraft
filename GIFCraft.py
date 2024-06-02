@@ -278,6 +278,10 @@ class GIFEditor:
 
     def resize_frames_dialog(self):
         """Open a simple dialog to get new size and resize all frames."""
+        if not any(var.get() for var in self.checkbox_vars):
+            messagebox.showinfo("info", "No frames are selected for resizing.")
+            return
+
         width = simpledialog.askinteger("Input", "Enter new width:", parent=self.master, minvalue=1)
         height = simpledialog.askinteger("Input", "Enter new height:", parent=self.master, minvalue=1)
         
@@ -454,6 +458,11 @@ class GIFEditor:
 
     def move_frames_to_position(self):
         """Move selected frames below the frame with the specified name."""
+        # Check if any frames are selected to move
+        if not any(var.get() for var in self.checkbox_vars):
+            messagebox.showinfo("info", "No frames selected to move.")
+            return
+
         frame_name = tk.simpledialog.askstring("Move Frames", "Enter the name of the frame to move below (e.g., Frame 1):")
         if not frame_name:
             return
@@ -500,7 +509,7 @@ class GIFEditor:
 
         self.update_frame_list()
         self.show_frame()
-
+        
     def move_frame_up(self, event=None):
         """Move the selected frames up in the list."""
         self.save_state()  # Save the state before making changes
@@ -790,12 +799,17 @@ class GIFEditor:
 
         # Prompt user for crop values
         try:
-            crop_left = int(simpledialog.askstring("Crop", "Enter pixels to crop from the left:"))
-            crop_right = int(simpledialog.askstring("Crop", "Enter pixels to crop from the right:"))
-            crop_top = int(simpledialog.askstring("Crop", "Enter pixels to crop from the top:"))
-            crop_bottom = int(simpledialog.askstring("Crop", "Enter pixels to crop from the bottom:"))
+            crop_left = int(simpledialog.askstring("Crop", "Enter pixels to crop from the left:", parent=self.master))
+            crop_right = int(simpledialog.askstring("Crop", "Enter pixels to crop from the right:", parent=self.master))
+            crop_top = int(simpledialog.askstring("Crop", "Enter pixels to crop from the top:", parent=self.master))
+            crop_bottom = int(simpledialog.askstring("Crop", "Enter pixels to crop from the bottom:", parent=self.master))
         except (TypeError, ValueError):
             messagebox.showerror("Invalid Input", "Please enter valid integers for cropping values.")
+            return
+
+        # Validate crop values
+        if crop_left < 0 or crop_right < 0 or crop_top < 0 or crop_bottom < 0:
+            messagebox.showerror("Invalid Input", "Crop values must be non-negative integers.")
             return
 
         self.save_state()  # Save the state before making changes
@@ -807,7 +821,7 @@ class GIFEditor:
             top = max(0, crop_top)
             right = width - max(0, crop_right)
             bottom = height - max(0, crop_bottom)
-            
+
             if right <= left or bottom <= top:
                 messagebox.showerror("Invalid Crop Values", "Cropping values are too large.")
                 return
