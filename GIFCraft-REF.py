@@ -70,6 +70,7 @@ class GIFEditor:
         edit_menu.add_command(label="Add Image", command=self.add_image)
         edit_menu.add_command(label="Delete Frame(s)", command=self.delete_frames, accelerator="Del")
         edit_menu.add_separator()
+        edit_menu.add_command(label="Move Selected Frames", command=self.prompt_and_move_selected_frames)
         edit_menu.add_command(label="Move Frame Up", command=self.move_frame_up, accelerator="Arrow Up")
         edit_menu.add_command(label="Move Frame Down", command=self.move_frame_down, accelerator="Arrow Down")
         edit_menu.add_separator()
@@ -266,6 +267,64 @@ class GIFEditor:
 
         self.update_frame_list()
         self.show_frame()  # Update the frame display
+
+    def prompt_and_move_selected_frames(self):
+        """Prompt the user for the target position and move the selected frames."""
+        if not self.frames:
+            messagebox.showerror("Error", "No frames available to move.")
+            return
+
+        target_position = simpledialog.askinteger("Move Frames", "Enter the target position (0-based index):",
+                                                  minvalue=0, maxvalue=len(self.frames) - 1)
+        if target_position is not None:
+            self.move_selected_frames(target_position)
+
+    def move_selected_frames(self, target_position):
+        """
+        Move selected frames to a specific target position.
+
+        Parameters:
+        - target_position (int): The position where the selected frames should be moved.
+
+        This function moves all the frames with checkboxes checked to the specified target position in a safe and consistent manner.
+        """
+        if not self.frames:
+            messagebox.showerror("Error", "No frames available to move.")
+            return
+
+        if target_position < 0 or target_position >= len(self.frames):
+            messagebox.showerror("Error", "Invalid target position.")
+            return
+
+        selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+
+        if not selected_indices:
+            messagebox.showinfo("Info", "No frames selected to move.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        # Get the selected frames and their delays
+        selected_frames = [self.frames[i] for i in selected_indices]
+        selected_delays = [self.delays[i] for i in selected_indices]
+
+        # Remove selected frames from their original positions
+        for index in reversed(selected_indices):
+            del self.frames[index]
+            del self.delays[index]
+            del self.checkbox_vars[index]
+
+        # Insert selected frames at the target position
+        for i, (frame, delay) in enumerate(zip(selected_frames, selected_delays)):
+            insert_position = target_position + i
+            self.frames.insert(insert_position, frame)
+            self.delays.insert(insert_position, delay)
+            var = IntVar(value=1)  # Check the checkbox for the moved frames
+            var.trace_add('write', lambda *args, i=insert_position: self.set_current_frame(i))
+            self.checkbox_vars.insert(insert_position, var)
+
+        self.update_frame_list()
+        self.show_frame()
 
     def move_frame_up(self, event=None):
         """Move the selected frame up in the list."""
