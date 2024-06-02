@@ -88,6 +88,7 @@ class GIFEditor:
         """Create the Effects menu."""
         effects_menu = Menu(self.menu_bar, tearoff=0)
         effects_menu.add_command(label="Apply Crossfade Effect", command=self.apply_crossfade_effect)
+        effects_menu.add_command(label="Reverse Frames", command=self.reverse_frames) 
         self.menu_bar.add_cascade(label="Effects", menu=effects_menu)
 
     def create_animation_menu(self):
@@ -775,6 +776,31 @@ class GIFEditor:
 
         self.update_frame_list()
         self.show_frame()
+
+    def reverse_frames(self):
+        """Apply reverse effect to the selected frames."""
+        self.save_state()  # Save the state before making changes
+        indices_to_reverse = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+        
+        if not indices_to_reverse:
+            messagebox.showinfo("Info", "No frames selected for reversing.")
+            return
+
+        # Extract the selected frames and their delays
+        frames_to_reverse = [self.frames[i] for i in indices_to_reverse]
+        delays_to_reverse = [self.delays[i] for i in indices_to_reverse]
+
+        # Reverse the selected frames and their delays
+        frames_to_reverse.reverse()
+        delays_to_reverse.reverse()
+
+        # Replace the selected frames and their delays with the reversed versions
+        for idx, i in enumerate(indices_to_reverse):
+            self.frames[i] = frames_to_reverse[idx]
+            self.delays[i] = delays_to_reverse[idx]
+
+        self.show_frame()
+        self.update_frame_list()
 
     def restore_state(self, state):
         """Restore the state of the editor."""
