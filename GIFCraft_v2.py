@@ -89,6 +89,9 @@ class GIFEditor:
         effects_menu = Menu(self.menu_bar, tearoff=0)
         effects_menu.add_command(label="Apply Crossfade Effect", command=self.apply_crossfade_effect)
         effects_menu.add_command(label="Desaturate Frames", command=self.desaturate_frames)
+        effects_menu.add_command(label="Invert Colors", command=self.invert_colors_frames_dialog)
+        effects_menu.add_command(label="Apply Tint Effect", command=self.apply_tint)
+        effects_menu.add_command(label="Apply Sepia Effect", command=self.apply_sepia_effect_dialog)
         effects_menu.add_command(label="Reverse Frames", command=self.reverse_frames)        
         effects_menu.add_command(label="Crop Frames", command=self.crop_frames_dialog)
         effects_menu.add_command(label="Rotate Frames", command=self.rotate_frames_dialog)
@@ -831,6 +834,127 @@ class GIFEditor:
         self.show_frame()
         self.update_frame_list()
 
+    def invert_colors_frames_dialog(self):
+            """Open a dialog to apply the negative effect to the selected frames."""
+            dialog = tk.Toplevel(self.master)
+            dialog.title("Invert Colors")
+
+            tk.Label(dialog, text="Apply negative effect to selected frames?").pack(pady=10)
+
+            def apply_invert_colors():
+                self.apply_invert_colors_effect()
+                dialog.destroy()
+
+            tk.Button(dialog, text="Apply", command=apply_invert_colors).pack(pady=10)
+            dialog.grab_set()
+
+    def apply_invert_colors_effect(self):
+        """Apply the negative effect (invert colors) to the selected frames."""
+        self.save_state()  # Save the state before making changes
+
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                self.frames[i] = ImageOps.invert(self.frames[i].convert("RGB")).convert("RGBA")
+
+        self.show_frame()
+        self.update_frame_list()
+
+    def apply_tint(self):
+        """Apply a tint effect to the selected frames."""
+        # Prompt user for hex color code and intensity
+        color_code = simpledialog.askstring("Tint Effect", "Enter tint color (hex code, e.g., #FF0000 for red):")
+        if not color_code or not (color_code.startswith('#') and len(color_code) == 7):
+            messagebox.showerror("Invalid Input", "Please enter a valid hex color code (e.g., #FF0000).")
+            return
+        
+        intensity = simpledialog.askinteger("Tint Effect", "Enter intensity (0-100):", minvalue=0, maxvalue=100)
+        if intensity is None or not (0 <= intensity <= 100):
+            messagebox.showerror("Invalid Input", "Please enter an intensity value between 0 and 100.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        # Apply the tint effect to the selected frames
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                self.frames[i] = self.tint_image(self.frames[i], color_code, intensity)
+        
+        self.show_frame()
+        self.update_frame_list()
+
+    def tint_image(self, image, color_code, intensity):
+        """Tint an image with the given color and intensity."""
+        r, g, b = Image.new("RGB", (1, 1), color_code).getpixel((0, 0))
+        intensity /= 100.0
+
+        # Create a tinted image
+        tinted_image = Image.new("RGBA", image.size)
+        for x in range(image.width):
+            for y in range(image.height):
+                pixel = image.getpixel((x, y))
+                tr = int(pixel[0] + (r - pixel[0]) * intensity)
+                tg = int(pixel[1] + (g - pixel[1]) * intensity)
+                tb = int(pixel[2] + (b - pixel[2]) * intensity)
+                ta = pixel[3]
+                tinted_image.putpixel((x, y), (tr, tg, tb, ta))
+
+        return tinted_image
+
+    def apply_sepia_effect_dialog(self):
+        """Open a dialog to choose the sepia effect intensity."""
+        dialog = tk.Toplevel(self.master)
+        dialog.title("Apply Sepia Effect")
+
+        tk.Label(dialog, text="Sepia Intensity (0-100):").pack(pady=5)
+        intensity_entry = tk.Entry(dialog)
+        intensity_entry.pack(pady=5)
+        intensity_entry.insert(0, "50")  # Default intensity value
+
+        def apply_sepia():
+            try:
+                intensity = int(intensity_entry.get())
+                if 0 <= intensity <= 100:
+                    self.save_state()  # Save the state before making changes
+                    self.apply_sepia_effect(intensity)
+                    dialog.destroy()
+                else:
+                    messagebox.showerror("Invalid Input", "Please enter a value between 0 and 100.")
+            except ValueError:
+                messagebox.showerror("Invalid Input", "Please enter a valid integer for intensity.")
+
+        tk.Button(dialog, text="Apply", command=apply_sepia).pack(pady=10)
+        dialog.grab_set()
+
+    def apply_sepia_effect(self, intensity):
+        """Apply sepia effect to the selected frames with the given intensity."""
+        def apply_sepia(image, intensity):
+            """Convert an image to sepia with a given intensity."""
+            width, height = image.size
+            pixels = image.load()  # Create a pixel map
+
+            for py in range(height):
+                for px in range(width):
+                    r, g, b, a = image.getpixel((px, py))
+
+                    tr = int(0.393 * r + 0.769 * g + 0.189 * b)
+                    tg = int(0.349 * r + 0.686 * g + 0.168 * b)
+                    tb = int(0.272 * r + 0.534 * g + 0.131 * b)
+
+                    tr = min(int(tr * (intensity / 100)), 255)
+                    tg = min(int(tg * (intensity / 100)), 255)
+                    tb = min(int(tb * (intensity / 100)), 255)
+
+                    pixels[px, py] = (tr, tg, tb, a)
+
+            return image
+
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                self.frames[i] = apply_sepia(self.frames[i], intensity)
+
+        self.show_frame()
+        self.update_frame_list()
+
     def reverse_frames(self):
         """Apply reverse effect to the selected frames."""
         self.save_state()  # Save the state before making changes
@@ -922,8 +1046,6 @@ class GIFEditor:
 
         self.show_frame()
         self.update_frame_list()
-
-
 
     def restore_state(self, state):
         """Restore the state of the editor."""
