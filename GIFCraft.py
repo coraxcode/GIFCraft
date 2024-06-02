@@ -75,7 +75,8 @@ class GIFEditor:
         edit_menu.add_separator()
         edit_menu.add_command(label="Check/Uncheck All", command=self.toggle_check_all, accelerator="A")
         edit_menu.add_separator()
-        edit_menu.add_command(label="Resize All Frames", command=self.resize_all_frames_dialog)
+        edit_menu.add_command(label="Crop Frames", command=self.crop_frames)
+        edit_menu.add_command(label="Resize Frames", command=self.resize_frames_dialog)
         edit_menu.add_separator()
         edit_menu.add_command(label="Copy", command=self.copy_frames, accelerator="Ctrl+C")
         edit_menu.add_command(label="Paste", command=self.paste_frames, accelerator="Ctrl+V")
@@ -275,44 +276,22 @@ class GIFEditor:
             return new_image
         return image
 
-    def resize_all_frames_dialog(self):
-        """Open a dialog to get the new size and resize all frames."""
-        dialog = tk.Toplevel(self.master)
-        dialog.title("Resize All Frames")
+    def resize_frames_dialog(self):
+        """Open a simple dialog to get new size and resize all frames."""
+        width = simpledialog.askinteger("Input", "Enter new width:", parent=self.master, minvalue=1)
+        height = simpledialog.askinteger("Input", "Enter new height:", parent=self.master, minvalue=1)
+        
+        if width and height:
+            self.resize_frames(width, height)
 
-        tk.Label(dialog, text="New Width:").pack(pady=5)
-        width_entry = tk.Entry(dialog)
-        width_entry.pack(pady=5)
-
-        tk.Label(dialog, text="New Height:").pack(pady=5)
-        height_entry = tk.Entry(dialog)
-        height_entry.pack(pady=5)
-
-        def resize():
-            try:
-                new_width = int(width_entry.get())
-                new_height = int(height_entry.get())
-                self.resize_all_frames(new_width, new_height)
-                dialog.destroy()
-            except ValueError:
-                messagebox.showerror("Invalid Input", "Please enter valid integers for width and height.")
-
-        tk.Button(dialog, text="Resize", command=resize).pack(pady=10)
-        dialog.grab_set()
-
-    def resize_all_frames(self, new_width=None, new_height=None):
-        """Resize all frames to the specified width and height."""
-        if new_width is None or new_height is None:
-            if hasattr(self, 'base_size'):
-                new_width, new_height = self.base_size
-            else:
-                return
-
-        self.save_state()  # Save the state before making changes
+    def resize_frames(self, new_width, new_height):
+        """Resize all checked frames to the specified width and height."""
+        self.save_state()
         for i, frame in enumerate(self.frames):
-            self.frames[i] = frame.resize((new_width, new_height), Image.Resampling.LANCZOS)
-        self.show_frame()
+            if self.checkbox_vars[i].get():
+                self.frames[i] = frame.resize((new_width, new_height), Image.LANCZOS)
         self.update_frame_list()
+        self.show_frame()
 
     def resize_image(self, image, max_width=800, max_height=600):
         """Resize the image to fit within the specified max width and height."""
@@ -801,6 +780,43 @@ class GIFEditor:
 
         self.show_frame()
         self.update_frame_list()
+
+    def crop_frames(self):
+        """Crop the selected frames based on user input values for each side."""
+        selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+        if not selected_indices:
+            messagebox.showinfo("Info", "No frames selected for cropping.")
+            return
+
+        # Prompt user for crop values
+        try:
+            crop_left = int(simpledialog.askstring("Crop", "Enter pixels to crop from the left:"))
+            crop_right = int(simpledialog.askstring("Crop", "Enter pixels to crop from the right:"))
+            crop_top = int(simpledialog.askstring("Crop", "Enter pixels to crop from the top:"))
+            crop_bottom = int(simpledialog.askstring("Crop", "Enter pixels to crop from the bottom:"))
+        except (TypeError, ValueError):
+            messagebox.showerror("Invalid Input", "Please enter valid integers for cropping values.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        for index in selected_indices:
+            frame = self.frames[index]
+            width, height = frame.size
+            left = max(0, crop_left)
+            top = max(0, crop_top)
+            right = width - max(0, crop_right)
+            bottom = height - max(0, crop_bottom)
+            
+            if right <= left or bottom <= top:
+                messagebox.showerror("Invalid Crop Values", "Cropping values are too large.")
+                return
+
+            cropped_frame = frame.crop((left, top, right, bottom))
+            self.frames[index] = cropped_frame
+
+        self.update_frame_list()
+        self.show_frame()
 
     def restore_state(self, state):
         """Restore the state of the editor."""
