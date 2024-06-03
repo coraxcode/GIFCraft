@@ -105,7 +105,7 @@ class GIFEditor:
         effects_menu.add_command(label="Desaturate Frames", command=self.desaturate_frames)
         effects_menu.add_command(label="Invert Colors", command=self.invert_colors_of_selected_frames)
         effects_menu.add_command(label="Apply Tint Effect", command=self.apply_tint)
-        effects_menu.add_command(label="Random Glitch Effect", command=self.apply_random_glitch_effect)
+        effects_menu.add_command(label="Adjust Brightness and Contrast", command=self.prompt_and_apply_brightness_contrast)
         self.menu_bar.add_cascade(label="Effects", menu=effects_menu)
 
     def create_animation_menu(self):
@@ -819,6 +819,41 @@ class GIFEditor:
                 tinted_image.putpixel((x, y), (tr, tg, tb, ta))
 
         return tinted_image
+
+    def prompt_and_apply_brightness_contrast(self):
+        """Prompt the user for brightness and contrast levels, then apply the changes to selected frames."""
+        brightness = simpledialog.askfloat("Brightness", "Enter brightness level (e.g., 1.0 for no change):", minvalue=0.0)
+        contrast = simpledialog.askfloat("Contrast", "Enter contrast level (e.g., 1.0 for no change):", minvalue=0.0)
+        
+        if brightness is not None and contrast is not None:
+            self.apply_brightness_contrast(brightness, contrast)
+
+    def apply_brightness_contrast(self, brightness=1.0, contrast=1.0):
+        """Apply brightness and contrast adjustments to selected frames.
+        
+        Parameters:
+        - brightness (float): Brightness factor, where 1.0 means no change, less than 1.0 darkens the image,
+          and greater than 1.0 brightens the image.
+        - contrast (float): Contrast factor, where 1.0 means no change, less than 1.0 reduces contrast,
+          and greater than 1.0 increases contrast.
+        """
+        # Save the state before making changes
+        self.save_state()
+
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i]
+                # Apply brightness adjustment
+                enhancer = ImageEnhance.Brightness(frame)
+                frame = enhancer.enhance(brightness)
+                # Apply contrast adjustment
+                enhancer = ImageEnhance.Contrast(frame)
+                frame = enhancer.enhance(contrast)
+                self.frames[i] = frame
+
+        # Update the frame list and show the current frame
+        self.update_frame_list()
+        self.show_frame()
 
     def apply_random_glitch_effect(self):
         """Apply a random glitch effect to the selected frames."""
