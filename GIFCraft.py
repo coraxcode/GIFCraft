@@ -1137,7 +1137,7 @@ class GIFEditor:
         """Display the current frame."""
         if self.frames:
             frame = self.frames[self.frame_index]
-            preview = self.resize_image(frame, max_width=800, max_height=600)
+            preview = self.resize_image(frame, max_width=200, max_height=150)
             photo = ImageTk.PhotoImage(preview)
             self.image_label.config(image=photo)
             self.image_label.image = photo
