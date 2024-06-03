@@ -72,6 +72,7 @@ class GIFEditor:
         """Create the Edit menu."""
         edit_menu = Menu(self.menu_bar, tearoff=0)
         edit_menu.add_command(label="Add Image", command=self.add_image)
+        edit_menu.add_command(label="Add Overlay Frame", command=self.apply_overlay_frame)
         edit_menu.add_command(label="Add Empty Frame", command=self.add_empty_frame)
         edit_menu.add_command(label="Delete Frame(s)", command=self.delete_frames, accelerator="Del")
         edit_menu.add_separator()
@@ -108,8 +109,13 @@ class GIFEditor:
         effects_menu.add_command(label="Invert Colors", command=self.invert_colors_of_selected_frames)
         effects_menu.add_command(label="Apply Tint Effect", command=self.apply_tint)
         effects_menu.add_command(label="Adjust Brightness and Contrast", command=self.prompt_and_apply_brightness_contrast)
-        effects_menu.add_command(label="Adjust Hue, Saturation, and Lightness", command=self.adjust_hsl)  # New menu item
+        effects_menu.add_command(label="Adjust Hue, Saturation, and Lightness", command=self.adjust_hsl)
         effects_menu.add_command(label="Zoom Effect", command=self.apply_zoom_effect)
+        effects_menu.add_command(label="Blur Effect", command=self.apply_blur_effect)
+        effects_menu.add_command(label="Noise Effect", command=self.apply_noise_effect)
+        effects_menu.add_command(label="Pixelate Effect", command=self.apply_pixelate_effect)
+        effects_menu.add_command(label="Reduce Transparency", command=self.reduce_transparency_of_checked_frames)
+        effects_menu.add_command(label="Slide Transition Effect", command=self.slide_transition_effect)
         self.menu_bar.add_cascade(label="Effects", menu=effects_menu)
 
     def create_animation_menu(self):
@@ -270,6 +276,50 @@ class GIFEditor:
             self.show_frame()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to add images: {e}")
+
+    def apply_overlay_frame(self):
+        """Apply an overlay frame (watermark or border) to the selected frames with user-defined transparency."""
+        overlay_file = filedialog.askopenfilename(filetypes=[("Image files", "*.png *.jpg *.jpeg *.gif")])
+        if not overlay_file:
+            return
+
+        # Prompt the user for the transparency intensity
+        intensity = simpledialog.askfloat("Overlay Frame Transparency", "Enter transparency intensity (0.0 to 1.0):", minvalue=0.0, maxvalue=1.0)
+        if intensity is None:
+            return  # User canceled the dialog
+
+        self.save_state()  # Save the state before making changes
+
+        try:
+            overlay_image = Image.open(overlay_file).convert("RGBA")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load overlay image: {e}")
+            return
+
+        # Resize the overlay image to match the frames' size if needed
+        if self.frames:
+            overlay_image = overlay_image.resize(self.frames[0].size, Image.LANCZOS)
+
+        def apply_transparent_overlay(frame, overlay, intensity):
+            """Apply the overlay to the frame using the given intensity, respecting transparency."""
+            frame = frame.convert("RGBA")
+            overlay = overlay.copy()
+            
+            # Extract the alpha channel and apply intensity
+            alpha = overlay.split()[3]
+            alpha = ImageEnhance.Brightness(alpha).enhance(intensity)
+            overlay.putalpha(alpha)
+            
+            return Image.alpha_composite(frame, overlay)
+
+        # Apply the overlay frame to the selected frames
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i].convert("RGBA")
+                self.frames[i] = apply_transparent_overlay(frame, overlay_image, intensity)
+
+        self.update_frame_list()
+        self.show_frame()
 
     def add_empty_frame(self):
         """Add an empty frame with an optional background color. If there are no frames, prompt for the size of the new frame."""
@@ -987,6 +1037,192 @@ class GIFEditor:
                 self.frames[i] = zoomed_frame.crop((left, top, right, bottom))
 
         # Update the frame list and show the current frame
+        self.update_frame_list()
+        self.show_frame()
+
+    def apply_blur_effect(self):
+        """Apply blur effect to selected frames with user-defined intensity."""
+        # Prompt user for blur intensity
+        blur_intensity = simpledialog.askinteger("Blur Effect", "Enter blur intensity (e.g., 2 for slight blur):", minvalue=0)
+        if blur_intensity is None or blur_intensity < 0:
+            messagebox.showerror("Invalid Input", "Please enter a valid positive integer for blur intensity.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        # Apply the blur effect to the selected frames
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                self.frames[i] = self.frames[i].filter(ImageFilter.GaussianBlur(blur_intensity))
+
+        self.update_frame_list()
+        self.show_frame()
+
+    def apply_noise_effect(self):
+        """Apply a noise effect to the selected frames based on user-defined intensity."""
+        # Prompt the user for the noise intensity
+        intensity = simpledialog.askinteger("Noise Effect", "Enter noise intensity (e.g., 10 for slight noise, 100 for heavy noise):", minvalue=1)
+        if intensity is None or intensity < 1:
+            messagebox.showerror("Invalid Input", "Please enter a valid positive integer for noise intensity.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        def add_noise(image, intensity):
+            """Add noise to an image."""
+            width, height = image.size
+            pixels = image.load()
+
+            for _ in range(width * height * intensity // 100):
+                x = random.randint(0, width - 1)
+                y = random.randint(0, height - 1)
+                r, g, b, a = pixels[x, y]
+                noise = random.randint(-intensity, intensity)
+                pixels[x, y] = (
+                    max(0, min(255, r + noise)),
+                    max(0, min(255, g + noise)),
+                    max(0, min(255, b + noise)),
+                    a
+                )
+
+            return image
+
+        # Apply the noise effect to the selected frames
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i].convert("RGBA")
+                self.frames[i] = add_noise(frame, intensity)
+
+        self.update_frame_list()
+        self.show_frame()
+
+    def apply_pixelate_effect(self):
+        """Apply pixelate effect to selected frames with user-defined intensity."""
+        # Prompt user for pixelation intensity
+        pixel_size = simpledialog.askinteger("Pixelate Effect", "Enter pixel size (e.g., 10 for blocky effect):", minvalue=1)
+        if pixel_size is None or pixel_size < 1:
+            messagebox.showerror("Invalid Input", "Please enter a valid positive integer for pixel size.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        # Apply the pixelate effect to the selected frames
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i]
+                width, height = frame.size
+                # Resize down to pixel size and back up to original size
+                small_frame = frame.resize((width // pixel_size, height // pixel_size), Image.NEAREST)
+                pixelated_frame = small_frame.resize(frame.size, Image.NEAREST)
+                self.frames[i] = pixelated_frame
+
+        self.update_frame_list()
+        self.show_frame()
+
+    def reduce_transparency_of_checked_frames(self):
+        """Reduce the transparency of the checked frames based on user-defined intensity."""
+        # Prompt the user for the transparency reduction intensity
+        intensity = simpledialog.askfloat("Transparency Reduction", "Enter intensity (0 to 1):", minvalue=0.0, maxvalue=1.0)
+        
+        if intensity is None:
+            return  # User canceled the dialog
+
+        self.save_state()  # Save the state before making changes
+
+        # Apply the transparency reduction to the checked frames
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i].convert("RGBA")
+                # Adjust the alpha channel based on the intensity
+                alpha = frame.split()[3]
+                alpha = ImageEnhance.Brightness(alpha).enhance(intensity)
+                frame.putalpha(alpha)
+                self.frames[i] = frame
+
+        self.update_frame_list()
+        self.show_frame()
+
+    def slide_transition_effect(self):
+        """Apply a slide transition effect to the selected frames based on user input for direction and speed."""
+        # Prompt the user for the direction of the slide
+        direction = simpledialog.askstring("Slide Transition Effect", "Enter direction (right, top, left, bottom):").strip().lower()
+        if direction not in ["right", "top", "left", "bottom"]:
+            messagebox.showerror("Invalid Input", "Please enter a valid direction: right, top, left, bottom.")
+            return
+
+        # Prompt the user for the speed (intensity) of the slide effect
+        speed = simpledialog.askinteger("Slide Transition Effect", "Enter speed (number of transition frames, e.g., 10):", minvalue=1)
+        if speed is None or speed < 1:
+            messagebox.showerror("Invalid Input", "Please enter a valid positive integer for speed.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        slide_frames = []
+        slide_delays = []
+
+        def generate_slide_frames(frame1, frame2, direction, speed):
+            """Generate slide frames transitioning from frame1 to frame2."""
+            frames = []
+            width, height = frame1.size
+
+            for step in range(speed):
+                new_frame = Image.new("RGBA", (width, height))
+                offset = int((step + 1) * (width if direction in ["left", "right"] else height) / speed)
+                if direction == "right":
+                    new_frame.paste(frame2, (-offset, 0))
+                    new_frame.paste(frame1, (width - offset, 0))
+                elif direction == "left":
+                    new_frame.paste(frame2, (offset, 0))
+                    new_frame.paste(frame1, (-width + offset, 0))
+                elif direction == "top":
+                    new_frame.paste(frame2, (0, offset))
+                    new_frame.paste(frame1, (0, -height + offset))
+                elif direction == "bottom":
+                    new_frame.paste(frame2, (0, -offset))
+                    new_frame.paste(frame1, (0, height - offset))
+                frames.append(new_frame)
+            
+            return frames
+
+        checked_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+
+        if len(checked_indices) < 2:
+            messagebox.showinfo("Info", "Need at least two checked frames to apply slide transition effect.")
+            return
+
+        for idx in range(len(checked_indices) - 1):
+            i = checked_indices[idx]
+            j = checked_indices[idx + 1]
+
+            frame1 = self.frames[i].convert("RGBA")
+            frame2 = self.frames[j].convert("RGBA")
+            slide_frames.append(frame1)
+            slide_delays.append(self.delays[i])
+
+            generated_frames = generate_slide_frames(frame1, frame2, direction, speed)
+            slide_frames.extend(generated_frames)
+            slide_delays.extend([self.delays[i] // speed] * speed)
+
+        slide_frames.append(self.frames[checked_indices[-1]])
+        slide_delays.append(self.delays[checked_indices[-1]])
+
+        # Remove checked frames in reverse order to maintain correct indices
+        for idx in reversed(checked_indices):
+            self.frames.pop(idx)
+            self.delays.pop(idx)
+            self.checkbox_vars.pop(idx)
+
+        # Insert the slide frames in the correct order
+        insert_index = checked_indices[0]
+        for frame, delay in zip(slide_frames, slide_delays):
+            self.frames.insert(insert_index, frame)
+            self.delays.insert(insert_index, delay)
+            var = IntVar(value=1)
+            var.trace_add('write', lambda *args, i=insert_index: self.set_current_frame(i))
+            self.checkbox_vars.insert(insert_index, var)
+            insert_index += 1
+
         self.update_frame_list()
         self.show_frame()
 
