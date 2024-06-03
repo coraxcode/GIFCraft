@@ -74,6 +74,14 @@ class GIFEditor:
         edit_menu.add_command(label="Move Selected Frames", command=self.prompt_and_move_selected_frames)
         edit_menu.add_command(label="Move Frame Up", command=self.move_frame_up, accelerator="Arrow Up")
         edit_menu.add_command(label="Move Frame Down", command=self.move_frame_down, accelerator="Arrow Down")
+        edit_menu.add_separator()        
+        edit_menu.add_command(label="Rotate Selected Frames 180º", command=self.rotate_selected_frames_180)
+        edit_menu.add_command(label="Rotate Selected Frames 90º CW", command=self.rotate_selected_frames_90_cw)
+        edit_menu.add_command(label="Rotate Selected Frames 90º CCW", command=self.rotate_selected_frames_90_ccw)
+        edit_menu.add_command(label="Rotate Selected Frames...", command=self.rotate_selected_frames)
+        edit_menu.add_separator()
+        edit_menu.add_command(label="Flip Selected Frames Horizontal", command=self.flip_selected_frames_horizontal)
+        edit_menu.add_command(label="Flip Selected Frames Vertical", command=self.flip_selected_frames_vertical)
         edit_menu.add_separator()
         edit_menu.add_command(label="Check/Uncheck All", command=self.toggle_check_all, accelerator="A")
         edit_menu.add_separator()
@@ -434,6 +442,70 @@ class GIFEditor:
         # Update the frame index to the new position of the moved frame
         self.frame_index = selected_index + 1
 
+        self.update_frame_list()
+        self.show_frame()
+
+    def rotate_selected_frames_180(self):
+        """Rotate the selected frames 180 degrees."""
+        self.save_state()  # Save the state before making changes
+        for i, frame in enumerate(self.frames):
+            if self.checkbox_vars[i].get() == 1:
+                self.frames[i] = frame.rotate(180)
+        self.update_frame_list()
+        self.show_frame()
+    
+    def rotate_selected_frames_90_cw(self):
+        """Rotate the selected frames 90 degrees clockwise."""
+        self.save_state()  # Save the state before making changes
+        for i, frame in enumerate(self.frames):
+            if self.checkbox_vars[i].get() == 1:
+                self.frames[i] = frame.rotate(-90, expand=True)
+        self.update_frame_list()
+        self.show_frame()
+
+    def rotate_selected_frames_90_ccw(self):
+        """Rotate the selected frames 90 degrees counterclockwise."""
+        self.save_state()  # Save the state before making changes
+        for i, frame in enumerate(self.frames):
+            if self.checkbox_vars[i].get() == 1:
+                self.frames[i] = frame.rotate(90, expand=True)
+        self.update_frame_list()
+        self.show_frame()
+
+    def rotate_selected_frames(self):
+        """Rotate the selected frames by a user-specified number of degrees."""
+        try:
+            angle = simpledialog.askfloat("Rotate Frames", "Enter the rotation angle in degrees:", parent=self.master)
+            if angle is None:  # User canceled the dialog
+                return
+            
+            self.save_state()  # Save the state before making changes
+            
+            for i, frame in enumerate(self.frames):
+                if self.checkbox_vars[i].get() == 1:
+                    self.frames[i] = frame.rotate(angle, expand=True)
+            
+            self.update_frame_list()
+            self.show_frame()
+        
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Please enter a valid number for the rotation angle.")
+
+    def flip_selected_frames_horizontal(self):
+        """Flip the selected frames horizontally."""
+        self.save_state()  # Save the state before making changes
+        for i, frame in enumerate(self.frames):
+            if self.checkbox_vars[i].get() == 1:
+                self.frames[i] = frame.transpose(Image.FLIP_LEFT_RIGHT)
+        self.update_frame_list()
+        self.show_frame()
+
+    def flip_selected_frames_vertical(self):
+        """Flip the selected frames vertically."""
+        self.save_state()  # Save the state before making changes
+        for i, frame in enumerate(self.frames):
+            if self.checkbox_vars[i].get() == 1:
+                self.frames[i] = frame.transpose(Image.FLIP_TOP_BOTTOM)
         self.update_frame_list()
         self.show_frame()
 
