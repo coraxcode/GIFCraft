@@ -45,6 +45,7 @@ class GIFEditor:
         self.menu_bar = Menu(self.master)
         self.create_file_menu()
         self.create_edit_menu()
+        self.create_effects_menu()
         self.create_animation_menu()
         self.create_help_menu()
         self.master.config(menu=self.menu_bar)
@@ -94,6 +95,13 @@ class GIFEditor:
         edit_menu.add_command(label="Undo", command=self.undo, accelerator="Ctrl+Z")
         edit_menu.add_command(label="Redo", command=self.redo, accelerator="Ctrl+Y")
         self.menu_bar.add_cascade(label="Edit", menu=edit_menu)
+
+    def create_effects_menu(self):
+        """Create the Effects menu."""
+        effects_menu = Menu(self.menu_bar, tearoff=0)
+        effects_menu.add_command(label="Crossfade Effect", command=self.crossfade_effect)
+        effects_menu.add_command(label="Reverse Frames", command=self.reverse_frames)
+        self.menu_bar.add_cascade(label="Effects", menu=effects_menu)
 
     def create_animation_menu(self):
         """Create the Animation menu."""
@@ -510,6 +518,25 @@ class GIFEditor:
         self.update_frame_list()
         self.show_frame()
 
+    def toggle_check_all(self, event=None):
+        """Toggle all checkboxes in the frame list without scrolling or changing the displayed frame."""
+        self.save_state()  # Save the state before making changes
+        new_state = not self.check_all.get()
+        self.check_all.set(new_state)
+        
+        # Temporarily remove traces
+        for var in self.checkbox_vars:
+            var.trace_remove('write', var.trace_info()[0][1])
+        
+        for var in self.checkbox_vars:
+            var.set(1 if new_state else 0)
+        
+        # Re-add traces
+        for i, var in enumerate(self.checkbox_vars):
+            var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
+        
+        self.update_frame_list()
+
     def crop_frames(self):
         """Crop the selected frames based on user input values for each side."""
         selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
@@ -639,23 +666,87 @@ class GIFEditor:
             self.update_title()
             self.check_all.set(False)  # Reset the check_all variable to ensure consistency
 
-    def toggle_check_all(self, event=None):
-        """Toggle all checkboxes in the frame list without scrolling or changing the displayed frame."""
+    def crossfade_effect(self):
+        """Apply crossfade effect between checked frames with user-defined transition frames."""
+        checked_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+
+        if len(checked_indices) < 2:
+            messagebox.showinfo("Info", "Need at least two checked frames to apply crossfade effect.")
+            return
+
+        # Ask user for the number of transition frames
+        transition_frames_count = simpledialog.askinteger("Crossfade Frames", "Enter the number of transition frames:", parent=self.master)
+        if transition_frames_count is None or transition_frames_count < 1:
+            messagebox.showerror("Error", "Number of transition frames must be at least 1.")
+            return
+
         self.save_state()  # Save the state before making changes
-        new_state = not self.check_all.get()
-        self.check_all.set(new_state)
+
+        crossfade_frames = []
+        crossfade_delays = []
+
+        def blend_frames(frame1, frame2, alpha):
+            """Blend two frames with given alpha."""
+            return Image.blend(frame1, frame2, alpha)
+
+        for idx in range(len(checked_indices) - 1):
+            i = checked_indices[idx]
+            j = checked_indices[idx + 1]
+
+            frame1 = self.frames[i].convert("RGBA")
+            frame2 = self.frames[j].convert("RGBA")
+            crossfade_frames.append(frame1)
+            crossfade_delays.append(self.delays[i])
+
+            # Generate crossfade frames
+            for step in range(1, transition_frames_count + 1):
+                alpha = step / float(transition_frames_count + 1)
+                blended_frame = blend_frames(frame1, frame2, alpha)
+                crossfade_frames.append(blended_frame)
+                crossfade_delays.append(self.delays[i] // (transition_frames_count + 1))
+
+        # Insert crossfade frames and delays at the correct positions
+        for idx in range(len(checked_indices) - 1, -1, -1):
+            i = checked_indices[idx]
+            self.frames.pop(i)
+            self.delays.pop(i)
+            self.checkbox_vars.pop(i)
+
+        insert_index = checked_indices[0]
+        for frame, delay in zip(crossfade_frames, crossfade_delays):
+            self.frames.insert(insert_index, frame)
+            self.delays.insert(insert_index, delay)
+            var = IntVar(value=1)
+            var.trace_add('write', lambda *args, i=insert_index: self.set_current_frame(i))
+            self.checkbox_vars.insert(insert_index, var)
+            insert_index += 1
+
+        self.update_frame_list()
+        self.show_frame()
+
+    def reverse_frames(self):
+        """Apply reverse effect to the selected frames."""
+        self.save_state()  # Save the state before making changes
+        indices_to_reverse = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
         
-        # Temporarily remove traces
-        for var in self.checkbox_vars:
-            var.trace_remove('write', var.trace_info()[0][1])
-        
-        for var in self.checkbox_vars:
-            var.set(1 if new_state else 0)
-        
-        # Re-add traces
-        for i, var in enumerate(self.checkbox_vars):
-            var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
-        
+        if not indices_to_reverse:
+            messagebox.showinfo("Info", "No frames selected for reversing.")
+            return
+
+        # Extract the selected frames and their delays
+        frames_to_reverse = [self.frames[i] for i in indices_to_reverse]
+        delays_to_reverse = [self.delays[i] for i in indices_to_reverse]
+
+        # Reverse the selected frames and their delays
+        frames_to_reverse.reverse()
+        delays_to_reverse.reverse()
+
+        # Replace the selected frames and their delays with the reversed versions
+        for idx, i in enumerate(indices_to_reverse):
+            self.frames[i] = frames_to_reverse[idx]
+            self.delays[i] = delays_to_reverse[idx]
+
+        self.show_frame()
         self.update_frame_list()
 
     def toggle_play_pause(self, event=None):
