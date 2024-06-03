@@ -85,6 +85,7 @@ class GIFEditor:
         edit_menu.add_separator()
         edit_menu.add_command(label="Check/Uncheck All", command=self.toggle_check_all, accelerator="A")
         edit_menu.add_separator()
+        edit_menu.add_command(label="Crop Frames", command=self.crop_frames)
         edit_menu.add_command(label="Resize Frames", command=self.resize_frames_dialog)
         edit_menu.add_separator()
         edit_menu.add_command(label="Copy", command=self.copy_frames, accelerator="Ctrl+C")
@@ -506,6 +507,48 @@ class GIFEditor:
         for i, frame in enumerate(self.frames):
             if self.checkbox_vars[i].get() == 1:
                 self.frames[i] = frame.transpose(Image.FLIP_TOP_BOTTOM)
+        self.update_frame_list()
+        self.show_frame()
+
+    def crop_frames(self):
+        """Crop the selected frames based on user input values for each side."""
+        selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+        if not selected_indices:
+            messagebox.showinfo("Info", "No frames selected for cropping.")
+            return
+
+        # Prompt user for crop values
+        try:
+            crop_left = int(simpledialog.askstring("Crop", "Enter pixels to crop from the left:", parent=self.master))
+            crop_right = int(simpledialog.askstring("Crop", "Enter pixels to crop from the right:", parent=self.master))
+            crop_top = int(simpledialog.askstring("Crop", "Enter pixels to crop from the top:", parent=self.master))
+            crop_bottom = int(simpledialog.askstring("Crop", "Enter pixels to crop from the bottom:", parent=self.master))
+        except (TypeError, ValueError):
+            messagebox.showerror("Invalid Input", "Please enter valid integers for cropping values.")
+            return
+
+        # Validate crop values
+        if crop_left < 0 or crop_right < 0 or crop_top < 0 or crop_bottom < 0:
+            messagebox.showerror("Invalid Input", "Crop values must be non-negative integers.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        for index in selected_indices:
+            frame = self.frames[index]
+            width, height = frame.size
+            left = max(0, crop_left)
+            top = max(0, crop_top)
+            right = width - max(0, crop_right)
+            bottom = height - max(0, crop_bottom)
+
+            if right <= left or bottom <= top:
+                messagebox.showerror("Invalid Crop Values", "Cropping values are too large.")
+                return
+
+            cropped_frame = frame.crop((left, top, right, bottom))
+            self.frames[index] = cropped_frame
+
         self.update_frame_list()
         self.show_frame()
 
