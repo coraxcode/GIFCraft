@@ -22,6 +22,8 @@ class GIFEditor:
         self.current_file = None
         self.checkbox_vars = []
         self.check_all = tk.BooleanVar(value=False)
+        self.preview_width = 200
+        self.preview_height = 150
 
         # Setup UI and bindings
         self.setup_ui()
@@ -106,12 +108,15 @@ class GIFEditor:
         effects_menu.add_command(label="Invert Colors", command=self.invert_colors_of_selected_frames)
         effects_menu.add_command(label="Apply Tint Effect", command=self.apply_tint)
         effects_menu.add_command(label="Adjust Brightness and Contrast", command=self.prompt_and_apply_brightness_contrast)
+        effects_menu.add_command(label="Adjust Hue, Saturation, and Lightness", command=self.adjust_hsl)  # New menu item
+        effects_menu.add_command(label="Zoom Effect", command=self.apply_zoom_effect)
         self.menu_bar.add_cascade(label="Effects", menu=effects_menu)
 
     def create_animation_menu(self):
         """Create the Animation menu."""
         animation_menu = Menu(self.menu_bar, tearoff=0)
         animation_menu.add_command(label="Play/Stop Animation", command=self.toggle_play_pause, accelerator="Space")
+        animation_menu.add_command(label="Change Preview Resolution", command=self.change_preview_resolution)
         self.menu_bar.add_cascade(label="Animation", menu=animation_menu)
 
     def create_help_menu(self):
@@ -820,41 +825,6 @@ class GIFEditor:
 
         return tinted_image
 
-    def prompt_and_apply_brightness_contrast(self):
-        """Prompt the user for brightness and contrast levels, then apply the changes to selected frames."""
-        brightness = simpledialog.askfloat("Brightness", "Enter brightness level (e.g., 1.0 for no change):", minvalue=0.0)
-        contrast = simpledialog.askfloat("Contrast", "Enter contrast level (e.g., 1.0 for no change):", minvalue=0.0)
-        
-        if brightness is not None and contrast is not None:
-            self.apply_brightness_contrast(brightness, contrast)
-
-    def apply_brightness_contrast(self, brightness=1.0, contrast=1.0):
-        """Apply brightness and contrast adjustments to selected frames.
-        
-        Parameters:
-        - brightness (float): Brightness factor, where 1.0 means no change, less than 1.0 darkens the image,
-          and greater than 1.0 brightens the image.
-        - contrast (float): Contrast factor, where 1.0 means no change, less than 1.0 reduces contrast,
-          and greater than 1.0 increases contrast.
-        """
-        # Save the state before making changes
-        self.save_state()
-
-        for i, var in enumerate(self.checkbox_vars):
-            if var.get() == 1:
-                frame = self.frames[i]
-                # Apply brightness adjustment
-                enhancer = ImageEnhance.Brightness(frame)
-                frame = enhancer.enhance(brightness)
-                # Apply contrast adjustment
-                enhancer = ImageEnhance.Contrast(frame)
-                frame = enhancer.enhance(contrast)
-                self.frames[i] = frame
-
-        # Update the frame list and show the current frame
-        self.update_frame_list()
-        self.show_frame()
-
     def apply_random_glitch_effect(self):
         """Apply a random glitch effect to the selected frames."""
         def glitch_frame(frame):
@@ -916,6 +886,110 @@ class GIFEditor:
         self.update_frame_list()
         self.show_frame()
 
+    def prompt_and_apply_brightness_contrast(self):
+        """Prompt the user for brightness and contrast levels, then apply the changes to selected frames."""
+        brightness = simpledialog.askfloat("Brightness", "Enter brightness level (e.g., 1.0 for no change):", minvalue=0.0)
+        contrast = simpledialog.askfloat("Contrast", "Enter contrast level (e.g., 1.0 for no change):", minvalue=0.0)
+        
+        if brightness is not None and contrast is not None:
+            self.apply_brightness_contrast(brightness, contrast)
+
+    def apply_brightness_contrast(self, brightness=1.0, contrast=1.0):
+        """Apply brightness and contrast adjustments to selected frames.
+        
+        Parameters:
+        - brightness (float): Brightness factor, where 1.0 means no change, less than 1.0 darkens the image,
+          and greater than 1.0 brightens the image.
+        - contrast (float): Contrast factor, where 1.0 means no change, less than 1.0 reduces contrast,
+          and greater than 1.0 increases contrast.
+        """
+        # Save the state before making changes
+        self.save_state()
+
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i]
+                # Apply brightness adjustment
+                enhancer = ImageEnhance.Brightness(frame)
+                frame = enhancer.enhance(brightness)
+                # Apply contrast adjustment
+                enhancer = ImageEnhance.Contrast(frame)
+                frame = enhancer.enhance(contrast)
+                self.frames[i] = frame
+
+        # Update the frame list and show the current frame
+        self.update_frame_list()
+        self.show_frame()
+
+    def adjust_hsl(self):
+        """Prompt the user for Hue, Saturation, and Lightness adjustments and apply them to selected frames."""
+        # Get user input for HSL adjustments
+        hue_shift = simpledialog.askfloat("Adjust Hue", "Enter hue shift (-180 to 180):", minvalue=-180, maxvalue=180)
+        if hue_shift is None:
+            return
+        saturation_factor = simpledialog.askfloat("Adjust Saturation", "Enter saturation factor (0.0 to 2.0):", minvalue=0.0, maxvalue=2.0)
+        if saturation_factor is None:
+            return
+        lightness_factor = simpledialog.askfloat("Adjust Lightness", "Enter lightness factor (0.0 to 2.0):", minvalue=0.0, maxvalue=2.0)
+        if lightness_factor is None:
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i].convert("RGB")
+
+                # Adjust Hue
+                hsv_image = frame.convert("HSV")
+                hsv_data = list(hsv_image.getdata())
+                hsv_data = [(int((h + hue_shift) % 360), s, v) for h, s, v in hsv_data]
+                hsv_image.putdata(hsv_data)
+                frame = hsv_image.convert("RGB")
+
+                # Adjust Saturation
+                enhancer = ImageEnhance.Color(frame)
+                frame = enhancer.enhance(saturation_factor)
+
+                # Adjust Lightness
+                enhancer = ImageEnhance.Brightness(frame)
+                frame = enhancer.enhance(lightness_factor)
+
+                self.frames[i] = frame.convert("RGBA")
+
+        self.update_frame_list()
+        self.show_frame()
+
+    def apply_zoom_effect(self):
+        """Apply a zoom effect to the selected frames."""
+        # Prompt the user for the zoom intensity
+        zoom_factor = simpledialog.askfloat("Zoom Effect", "Enter zoom intensity (e.g., 1.2 for 20% zoom in):", minvalue=0.1)
+        if zoom_factor is None:
+            return
+
+        # Save the state before making changes for undo functionality
+        self.save_state()
+
+        # Apply zoom effect to each selected frame
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i]
+                width, height = frame.size
+                new_width = int(width * zoom_factor)
+                new_height = int(height * zoom_factor)
+                zoomed_frame = frame.resize((new_width, new_height), Image.LANCZOS)
+
+                # Center crop the zoomed frame to the original size
+                left = (new_width - width) // 2
+                top = (new_height - height) // 2
+                right = left + width
+                bottom = top + height
+                self.frames[i] = zoomed_frame.crop((left, top, right, bottom))
+
+        # Update the frame list and show the current frame
+        self.update_frame_list()
+        self.show_frame()
+
     def toggle_play_pause(self, event=None):
         """Toggle play/pause for the animation."""
         if self.is_playing:
@@ -933,6 +1007,21 @@ class GIFEditor:
         """Stop the GIF animation."""
         self.is_playing = False
         self.play_button.config(text="Play")
+
+    def change_preview_resolution(self):
+        """Change the preview resolution based on user input."""
+        resolution = simpledialog.askstring("Change Preview Resolution", "Enter new resolution (e.g., 800x600):")
+        if resolution:
+            try:
+                width, height = map(int, resolution.split('x'))
+                if width > 0 and height > 0:
+                    self.preview_width = width
+                    self.preview_height = height
+                    self.show_frame()  # Update the displayed frame with new resolution
+                else:
+                    messagebox.showerror("Invalid Resolution", "Width and height must be positive integers.")
+            except ValueError:
+                messagebox.showerror("Invalid Format", "Please enter the resolution in the format '800x600'.")
 
     def play_next_frame(self):
         """Play the next frame in the animation."""
@@ -1137,7 +1226,7 @@ class GIFEditor:
         """Display the current frame."""
         if self.frames:
             frame = self.frames[self.frame_index]
-            preview = self.resize_image(frame, max_width=200, max_height=150)
+            preview = self.resize_image(frame, max_width=self.preview_width, max_height=self.preview_height)
             photo = ImageTk.PhotoImage(preview)
             self.image_label.config(image=photo)
             self.image_label.image = photo
@@ -1154,6 +1243,7 @@ class GIFEditor:
             self.dimension_label.config(text="")  # Clear frame dimensions
             self.total_duration_label.config(text="")  # Clear total duration
         self.update_frame_list()  # Refresh the frame list to show the current frame indicator
+
 
     def save_state(self):
         """Save the current state for undo functionality."""
