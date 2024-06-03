@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, Frame, Canvas, Menu, Checkbutton, IntVar, Scrollbar, simpledialog
-from PIL import Image, ImageTk, ImageSequence
+from PIL import Image, ImageTk, ImageSequence, ImageOps, ImageEnhance, ImageFilter
 import os
+import random 
 
 
 class GIFEditor:
@@ -101,6 +102,10 @@ class GIFEditor:
         effects_menu = Menu(self.menu_bar, tearoff=0)
         effects_menu.add_command(label="Crossfade Effect", command=self.crossfade_effect)
         effects_menu.add_command(label="Reverse Frames", command=self.reverse_frames)
+        effects_menu.add_command(label="Desaturate Frames", command=self.desaturate_frames)
+        effects_menu.add_command(label="Invert Colors", command=self.invert_colors_of_selected_frames)
+        effects_menu.add_command(label="Apply Tint Effect", command=self.apply_tint)
+        effects_menu.add_command(label="Random Glitch Effect", command=self.apply_random_glitch_effect)
         self.menu_bar.add_cascade(label="Effects", menu=effects_menu)
 
     def create_animation_menu(self):
@@ -748,6 +753,133 @@ class GIFEditor:
 
         self.show_frame()
         self.update_frame_list()
+
+    def desaturate_frames(self):
+        """Apply desaturation effect to the selected frames."""
+        self.save_state()  # Save the state before making changes
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i]
+                self.frames[i] = frame.convert("L").convert("RGBA")  # Convert to grayscale and then back to RGBA
+        self.show_frame()
+        self.update_frame_list()
+
+    def invert_colors_of_selected_frames(self):
+        """Invert colors of the selected frames."""
+        if not any(var.get() for var in self.checkbox_vars):
+            messagebox.showinfo("Info", "No frames selected for color inversion.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                self.frames[i] = ImageOps.invert(self.frames[i].convert("RGB")).convert("RGBA")
+        
+        self.update_frame_list()
+        self.show_frame()
+
+    def apply_tint(self):
+            """Apply a tint effect to the selected frames."""
+            # Prompt user for hex color code and intensity
+            color_code = simpledialog.askstring("Tint Effect", "Enter tint color (hex code, e.g., #FF0000 for red):")
+            if not color_code or not (color_code.startswith('#') and len(color_code) == 7):
+                messagebox.showerror("Invalid Input", "Please enter a valid hex color code (e.g., #FF0000).")
+                return
+            
+            intensity = simpledialog.askinteger("Tint Effect", "Enter intensity (0-100):", minvalue=0, maxvalue=100)
+            if intensity is None or not (0 <= intensity <= 100):
+                messagebox.showerror("Invalid Input", "Please enter an intensity value between 0 and 100.")
+                return
+
+            self.save_state()  # Save the state before making changes
+
+            # Apply the tint effect to the selected frames
+            for i, var in enumerate(self.checkbox_vars):
+                if var.get() == 1:
+                    self.frames[i] = self.tint_image(self.frames[i], color_code, intensity)
+            
+            self.show_frame()
+            self.update_frame_list()
+
+    def tint_image(self, image, color_code, intensity):
+        """Tint an image with the given color and intensity."""
+        r, g, b = Image.new("RGB", (1, 1), color_code).getpixel((0, 0))
+        intensity /= 100.0
+
+        # Create a tinted image
+        tinted_image = Image.new("RGBA", image.size)
+        for x in range(image.width):
+            for y in range(image.height):
+                pixel = image.getpixel((x, y))
+                tr = int(pixel[0] + (r - pixel[0]) * intensity)
+                tg = int(pixel[1] + (g - pixel[1]) * intensity)
+                tb = int(pixel[2] + (b - pixel[2]) * intensity)
+                ta = pixel[3]
+                tinted_image.putpixel((x, y), (tr, tg, tb, ta))
+
+        return tinted_image
+
+    def apply_random_glitch_effect(self):
+        """Apply a random glitch effect to the selected frames."""
+        def glitch_frame(frame):
+            """Apply glitch effect to a single frame."""
+            width, height = frame.size
+
+            # Convert frame to RGB
+            frame = frame.convert("RGB")
+            r, g, b = frame.split()
+
+            # Randomly offset each color channel (Chromatic Aberration)
+            r = r.transform(r.size, Image.AFFINE, (1, 0, random.uniform(-3, 3), 0, 1, random.uniform(-3, 3)))
+            g = g.transform(g.size, Image.AFFINE, (1, 0, random.uniform(-3, 3), 0, 1, random.uniform(-3, 3)))
+            b = b.transform(b.size, Image.AFFINE, (1, 0, random.uniform(-3, 3), 0, 1, random.uniform(-3, 3)))
+
+            # Merge channels back
+            frame = Image.merge("RGB", (r, g, b))
+
+            # Add displacement mapping
+            displacement = Image.effect_noise((width, height), 100)
+            displacement = displacement.filter(ImageFilter.GaussianBlur(1))
+            displacement = displacement.point(lambda p: p > 128 and 255)
+            frame = Image.composite(frame, frame.filter(ImageFilter.GaussianBlur(5)), displacement)
+
+            # Convert back to RGBA
+            frame = frame.convert("RGBA")
+
+            # Add random noise
+            pixels = frame.load()
+            for _ in range(random.randint(1000, 3000)):
+                x = random.randint(0, width - 1)
+                y = random.randint(0, height - 1)
+                noise = random.randint(50, 200)  # Gray noise
+                pixels[x, y] = (noise, noise, noise, pixels[x, y][3])
+
+            # Add horizontal gray lines with grain
+            for _ in range(random.randint(5, 20)):
+                y = random.randint(0, height - 1)
+                line_height = random.randint(1, 3)
+                gray_value = random.randint(50, 200)  # Gray line color
+                for line in range(line_height):
+                    if y + line < height:
+                        for x in range(width):
+                            grain = random.randint(-20, 20)  # Add grain effect
+                            alpha = pixels[x, y + line][3]
+                            gray_with_grain = min(max(gray_value + grain, 0), 255)
+                            pixels[x, y + line] = (gray_with_grain, gray_with_grain, gray_with_grain, alpha)
+
+            return frame
+
+        self.save_state()  # Save the state before making changes
+
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i]
+                glitched_frame = glitch_frame(frame.copy())
+                self.frames[i] = glitched_frame
+
+        self.update_frame_list()
+        self.show_frame()
 
     def toggle_play_pause(self, event=None):
         """Toggle play/pause for the animation."""
