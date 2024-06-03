@@ -112,6 +112,7 @@ class GIFEditor:
         effects_menu.add_command(label="Adjust Hue, Saturation, and Lightness", command=self.adjust_hsl)
         effects_menu.add_command(label="Zoom Effect", command=self.apply_zoom_effect)
         effects_menu.add_command(label="Blur Effect", command=self.apply_blur_effect)
+        effects_menu.add_command(label="Zoom and Speed Blur Effect", command=self.apply_zoom_and_speed_blur_effect)
         effects_menu.add_command(label="Noise Effect", command=self.apply_noise_effect)
         effects_menu.add_command(label="Pixelate Effect", command=self.apply_pixelate_effect)
         effects_menu.add_command(label="Reduce Transparency", command=self.reduce_transparency_of_checked_frames)
@@ -1057,6 +1058,81 @@ class GIFEditor:
 
         self.update_frame_list()
         self.show_frame()
+
+    def apply_zoom_and_speed_blur_effect(self):
+        """Prompt user to apply a zoom or speed blur effect to selected frames."""
+        effect_type = simpledialog.askstring("Choose Effect", "Enter effect type (zoom or speed):").strip().lower()
+        if effect_type not in ["zoom", "speed"]:
+            messagebox.showerror("Invalid Input", "Please enter a valid effect type: 'zoom' or 'speed'.")
+            return
+
+        intensity = simpledialog.askfloat("Effect Intensity", "Enter intensity (e.g., 1.2 for zoom, 5 for speed):", minvalue=0.1)
+        if intensity is None or intensity < 0.1:
+            messagebox.showerror("Invalid Input", "Please enter a valid intensity value.")
+            return
+
+        if effect_type == "speed":
+            direction = simpledialog.askstring("Speed Blur Direction", "Enter direction (right, left, top, bottom):").strip().lower()
+            if direction not in ["right", "left", "top", "bottom"]:
+                messagebox.showerror("Invalid Input", "Please enter a valid direction: 'right', 'left', 'top', 'bottom'.")
+                return
+
+        self.save_state()  # Save the state before making changes
+
+        # Apply the chosen effect to the selected frames
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                if effect_type == "zoom":
+                    self.frames[i] = self.apply_zoom_blur(self.frames[i], intensity)
+                elif effect_type == "speed":
+                    self.frames[i] = self.apply_speed_blur(self.frames[i], intensity, direction)
+
+        self.update_frame_list()
+        self.show_frame()
+
+    def apply_zoom_blur(self, frame, intensity):
+        """Apply a zoom blur effect to a frame."""
+        width, height = frame.size
+        
+        zoomed_frame = frame.copy()
+        for i in range(1, int(intensity * 10) + 1):
+            zoom_factor = 1 + i * 0.01
+            layer = frame.resize((int(width * zoom_factor), int(height * zoom_factor)), Image.LANCZOS)
+            layer = layer.crop((
+                (layer.width - width) // 2,
+                (layer.height - height) // 2,
+                (layer.width + width) // 2,
+                (layer.height + height) // 2
+            ))
+            zoomed_frame = Image.blend(zoomed_frame, layer, alpha=0.05)
+        
+        return zoomed_frame
+
+    def apply_speed_blur(self, frame, intensity, direction):
+        """Apply a speed blur effect to a frame in the specified direction."""
+        width, height = frame.size
+        
+        speed_blur_frame = frame.copy()
+        for i in range(1, int(intensity * 10) + 1):
+            offset = int(i * 2)
+            if direction == "right":
+                matrix = (1, 0, -offset, 0, 1, 0)
+            elif direction == "left":
+                matrix = (1, 0, offset, 0, 1, 0)
+            elif direction == "top":
+                matrix = (1, 0, 0, 0, 1, offset)
+            elif direction == "bottom":
+                matrix = (1, 0, 0, 0, 1, -offset)
+            layer = frame.transform(
+                frame.size,
+                Image.AFFINE,
+                matrix,
+                resample=Image.BICUBIC
+            )
+            speed_blur_frame = Image.blend(speed_blur_frame, layer, alpha=0.05)
+        
+        return speed_blur_frame
+
 
     def apply_noise_effect(self):
         """Apply a noise effect to the selected frames based on user-defined intensity."""
