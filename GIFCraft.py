@@ -289,6 +289,9 @@ class GIFEditor:
         if intensity is None:
             return  # User canceled the dialog
 
+        # Prompt the user whether to distort the overlay image to match the frame size
+        distort_overlay = messagebox.askyesno("Distort Overlay", "Do you want to distort the overlay image to match the frame size?")
+
         self.save_state()  # Save the state before making changes
 
         try:
@@ -297,14 +300,22 @@ class GIFEditor:
             messagebox.showerror("Error", f"Failed to load overlay image: {e}")
             return
 
-        # Resize the overlay image to match the frames' size if needed
-        if self.frames:
-            overlay_image = overlay_image.resize(self.frames[0].size, Image.LANCZOS)
-
-        def apply_transparent_overlay(frame, overlay, intensity):
+        def apply_transparent_overlay(frame, overlay, intensity, distort):
             """Apply the overlay to the frame using the given intensity, respecting transparency."""
             frame = frame.convert("RGBA")
             overlay = overlay.copy()
+            
+            if distort:
+                overlay = overlay.resize(frame.size, Image.LANCZOS)
+            else:
+                # Center the overlay if not distorting
+                overlay_width, overlay_height = overlay.size
+                frame_width, frame_height = frame.size
+                x_offset = (frame_width - overlay_width) // 2
+                y_offset = (frame_height - overlay_height) // 2
+                new_overlay = Image.new("RGBA", frame.size, (0, 0, 0, 0))
+                new_overlay.paste(overlay, (x_offset, y_offset))
+                overlay = new_overlay
             
             # Extract the alpha channel and apply intensity
             alpha = overlay.split()[3]
@@ -317,7 +328,7 @@ class GIFEditor:
         for i, var in enumerate(self.checkbox_vars):
             if var.get() == 1:
                 frame = self.frames[i].convert("RGBA")
-                self.frames[i] = apply_transparent_overlay(frame, overlay_image, intensity)
+                self.frames[i] = apply_transparent_overlay(frame, overlay_image, intensity, distort_overlay)
 
         self.update_frame_list()
         self.show_frame()
