@@ -1,4 +1,3 @@
-
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog
 from tkinter import Menu, Checkbutton, IntVar, Scrollbar, Frame, Canvas
