@@ -258,51 +258,34 @@ class GIFEditor:
                 messagebox.showerror("Error", f"Failed to save {ext.upper()}: {e}")
 
     def merge_frames(self):
-        """Merge selected frames, respecting transparency."""
-        selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
-
-        if len(selected_indices) < 2:
-            messagebox.showinfo("Info", "Please select at least two frames to merge.")
-            return
-
+        """Merge the checked frames from top to bottom respecting transparency."""
         self.save_state()  # Save the state before making changes
 
-        try:
-            # Create a new blank frame with the size of the first selected frame
-            base_frame = self.frames[selected_indices[0]].copy()
-            merged_frame = Image.new("RGBA", base_frame.size)
+        # Find the indices of the checked frames
+        checked_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
 
-            # Merge all selected frames
-            for index in selected_indices:
-                frame = self.frames[index].convert("RGBA")
-                merged_frame = Image.alpha_composite(merged_frame, frame)
+        if not checked_indices:
+            messagebox.showinfo("Info", "No frames selected for merging.")
+            return
 
-            # Calculate the average delay of the selected frames
-            avg_delay = int(sum(self.delays[i] for i in selected_indices) / len(selected_indices))
+        # Merge the frames
+        base_frame = self.frames[checked_indices[0]].copy()
+        for index in checked_indices[1:]:
+            frame = self.frames[index]
+            base_frame = Image.alpha_composite(base_frame, frame)
 
-            # Insert the merged frame at the position of the first selected frame
-            first_index = selected_indices[0]
-            self.frames.insert(first_index, merged_frame)
-            self.delays.insert(first_index, avg_delay)  # Use the average delay for the merged frame
-            var = IntVar(value=1)
-            var.trace_add('write', lambda *args, i=first_index: self.set_current_frame(i))
-            self.checkbox_vars.insert(first_index, var)
+        # Replace the first checked frame with the merged frame
+        self.frames[checked_indices[0]] = base_frame
+        # Remove the other checked frames
+        for index in reversed(checked_indices[1:]):
+            del self.frames[index]
+            del self.delays[index]
+            del self.checkbox_vars[index]
 
-            # Remove the original selected frames, starting from the end to maintain indices
-            for index in sorted(selected_indices[1:], reverse=True):
-                del self.frames[index]
-                del self.delays[index]
-                del self.checkbox_vars[index]
-
-            # Ensure the frame index is within the bounds
-            self.frame_index = min(first_index, len(self.frames) - 1)
-
-            self.update_frame_list()
-            self.show_frame()
-
-        except Exception as e:
-            messagebox.showerror("Error", f"An error occurred while merging frames: {e}")
-
+        self.frame_index = checked_indices[0]
+        self.update_frame_list()
+        self.show_frame()
+        messagebox.showinfo("Success", "Frames merged successfully!")
 
     def add_image(self):
         """Add images to the frames."""
