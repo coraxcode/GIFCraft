@@ -1,9 +1,9 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, Frame, Canvas, Menu, Checkbutton, IntVar, Scrollbar, simpledialog
-from PIL import Image, ImageTk, ImageSequence, ImageOps, ImageEnhance, ImageFilter
+from tkinter import filedialog, messagebox, simpledialog
+from tkinter import Menu, Checkbutton, IntVar, Scrollbar, Frame, Canvas
+from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageSequence, ImageOps, ImageEnhance, ImageFilter
 import os
-import random 
-
+import random
 
 class GIFEditor:
     def __init__(self, master):
@@ -71,7 +71,9 @@ class GIFEditor:
     def create_edit_menu(self):
         """Create the Edit menu."""
         edit_menu = Menu(self.menu_bar, tearoff=0)
+        edit_menu.add_command(label="Merge Selected Frames", command=self.merge_frames)
         edit_menu.add_command(label="Add Image", command=self.add_image)
+        edit_menu.add_command(label="Add Text", command=self.add_text_frame)
         edit_menu.add_command(label="Add Overlay Frame", command=self.apply_overlay_frame)
         edit_menu.add_command(label="Add Empty Frame", command=self.add_empty_frame)
         edit_menu.add_command(label="Delete Frame(s)", command=self.delete_frames, accelerator="Del")
@@ -254,6 +256,53 @@ class GIFEditor:
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save {ext.upper()}: {e}")
 
+    def merge_frames(self):
+        """Merge selected frames, respecting transparency."""
+        selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+
+        if len(selected_indices) < 2:
+            messagebox.showinfo("Info", "Please select at least two frames to merge.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        try:
+            # Create a new blank frame with the size of the first selected frame
+            base_frame = self.frames[selected_indices[0]].copy()
+            merged_frame = Image.new("RGBA", base_frame.size)
+
+            # Merge all selected frames
+            for index in selected_indices:
+                frame = self.frames[index].convert("RGBA")
+                merged_frame = Image.alpha_composite(merged_frame, frame)
+
+            # Calculate the average delay of the selected frames
+            avg_delay = int(sum(self.delays[i] for i in selected_indices) / len(selected_indices))
+
+            # Insert the merged frame at the position of the first selected frame
+            first_index = selected_indices[0]
+            self.frames.insert(first_index, merged_frame)
+            self.delays.insert(first_index, avg_delay)  # Use the average delay for the merged frame
+            var = IntVar(value=1)
+            var.trace_add('write', lambda *args, i=first_index: self.set_current_frame(i))
+            self.checkbox_vars.insert(first_index, var)
+
+            # Remove the original selected frames, starting from the end to maintain indices
+            for index in sorted(selected_indices[1:], reverse=True):
+                del self.frames[index]
+                del self.delays[index]
+                del self.checkbox_vars[index]
+
+            # Ensure the frame index is within the bounds
+            self.frame_index = min(first_index, len(self.frames) - 1)
+
+            self.update_frame_list()
+            self.show_frame()
+
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred while merging frames: {e}")
+
+
     def add_image(self):
         """Add images to the frames."""
         file_paths = filedialog.askopenfilenames(filetypes=[("Image files", "*.jpg *.jpeg *.png *.webp *.gif *.bmp")])
@@ -278,6 +327,116 @@ class GIFEditor:
             self.show_frame()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to add images: {e}")
+
+    def add_text_frame(self):
+        """Create a frame with text using user inputs for font, size, color, outline, and position."""
+        
+        # Check if there are enough frames for reference
+        if len(self.frames) < 10:
+            messagebox.showerror("Error", "There are not enough frames to use as a reference for mouse positioning.")
+            return
+        
+        # Get text from user
+        text = simpledialog.askstring("Add Text", "Enter text to display:")
+        if not text:
+            return
+
+        # Get available fonts
+        font_directory = '/usr/share/fonts/truetype'
+        fonts = [f[:-4] for f in os.listdir(font_directory) if f.endswith('.ttf')]
+        
+        # Use default font if no fonts are found
+        default_font = 'DejaVuSans-Bold'
+        if not fonts:
+            font_choice = default_font
+        else:
+            font_choice = simpledialog.askstring("Choose Font", f"Available fonts:\n{', '.join(fonts)}\nEnter font name (default: {default_font}):")
+            if not font_choice or font_choice not in fonts:
+                font_choice = default_font
+
+        font_path = os.path.join(font_directory, f"{font_choice}.ttf")
+
+        # Get font size
+        font_size = simpledialog.askinteger("Font Size", "Enter font size (in pixels):", minvalue=1)
+        if font_size is None:
+            return
+
+        # Get text color
+        text_color = simpledialog.askstring("Text Color", "Enter text color (hex code, e.g., #FF0000 for red):")
+        if not text_color:
+            return
+
+        # Get outline color
+        outline_color = simpledialog.askstring("Outline Color", "Enter outline color (hex code, e.g., #000000 for black):")
+        if not outline_color:
+            return
+
+        # Get outline thickness
+        outline_thickness = simpledialog.askinteger("Outline Thickness", "Enter outline thickness (0 to 5):", minvalue=0, maxvalue=5)
+        if outline_thickness is None:
+            return
+
+        # Get text position
+        position_choice = simpledialog.askstring("Text Position", "Enter text position (top, center, bottom, mouse):").lower()
+        if position_choice not in ["top", "center", "bottom", "mouse"]:
+            return
+
+        # Create a new transparent frame
+        base_size = getattr(self, 'base_size', (800, 600))
+        new_frame = Image.new("RGBA", tuple(base_size), (0, 0, 0, 0))
+
+        # Load the font
+        font = ImageFont.truetype(font_path, font_size)
+        draw = ImageDraw.Draw(new_frame)
+
+        # Calculate text size and position
+        text_bbox = draw.textbbox((0, 0), text, font=font)
+        text_width, text_height = text_bbox[2] - text_bbox[0], text_bbox[3] - text_bbox[1]
+
+        if position_choice == "top":
+            text_position = (base_size[0] // 2 - text_width // 2, 10)
+        elif position_choice == "center":
+            text_position = (base_size[0] // 2 - text_width // 2, base_size[1] // 2 - text_height // 2)
+        elif position_choice == "bottom":
+            text_position = (base_size[0] // 2 - text_width // 2, base_size[1] - text_height - 10)
+        elif position_choice == "mouse":
+            # Use the 10th frame as reference for mouse positioning
+            ref_frame = self.frames[9].copy()
+            ref_image = ImageTk.PhotoImage(ref_frame)
+            
+            top = tk.Toplevel(self.master)
+            top.title("Click to Position Text")
+            canvas = tk.Canvas(top, width=ref_frame.width, height=ref_frame.height)
+            canvas.pack()
+            canvas.create_image(0, 0, anchor=tk.NW, image=ref_image)
+
+            text_position = [0, 0]
+
+            def on_click(event):
+                text_position[0] = event.x - text_width // 2
+                text_position[1] = event.y - text_height // 2
+                top.destroy()
+
+            canvas.bind("<Button-1>", on_click)
+            self.master.wait_window(top)
+
+        # Draw text with outline
+        if outline_thickness > 0:
+            for dx in range(-outline_thickness, outline_thickness + 1):
+                for dy in range(-outline_thickness, outline_thickness + 1):
+                    if dx != 0 or dy != 0:
+                        draw.text((text_position[0] + dx, text_position[1] + dy), text, font=font, fill=outline_color)
+        draw.text(text_position, text, font=font, fill=text_color)
+
+        # Add the new frame to the frames list
+        self.frames.append(new_frame)
+        self.delays.append(100)  # Default delay for new frame
+        var = IntVar()
+        var.trace_add('write', lambda *args, i=len(self.checkbox_vars): self.set_current_frame(i))
+        self.checkbox_vars.append(var)
+
+        self.update_frame_list()
+        self.show_frame()
 
     def apply_overlay_frame(self):
         """Apply an overlay frame (watermark or border) to the selected frames with user-defined transparency."""
