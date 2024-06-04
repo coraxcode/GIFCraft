@@ -330,12 +330,12 @@ class GIFEditor:
 
     def add_text_frame(self):
         """Create a frame with text using user inputs for font, size, color, outline, and position."""
-        
-        # Check if there are enough frames for reference
-        if len(self.frames) < 10:
-            messagebox.showerror("Error", "There are not enough frames to use as a reference for mouse positioning.")
+
+        # Ensure there are frames to use as a reference for mouse positioning
+        if len(self.frames) < 1:
+            messagebox.showerror("Error", "There are no frames available to use as a reference.")
             return
-        
+
         # Get text from user
         text = simpledialog.askstring("Add Text", "Enter text to display:")
         if not text:
@@ -344,7 +344,7 @@ class GIFEditor:
         # Get available fonts
         font_directory = '/usr/share/fonts/truetype'
         fonts = [f[:-4] for f in os.listdir(font_directory) if f.endswith('.ttf')]
-        
+
         # Use default font if no fonts are found
         default_font = 'DejaVuSans-Bold'
         if not fonts:
@@ -382,8 +382,8 @@ class GIFEditor:
             return
 
         # Create a new transparent frame
-        base_size = getattr(self, 'base_size', (800, 600))
-        new_frame = Image.new("RGBA", tuple(base_size), (0, 0, 0, 0))
+        base_size = self.frames[0].size
+        new_frame = Image.new("RGBA", base_size, (0, 0, 0, 0))
 
         # Load the font
         font = ImageFont.truetype(font_path, font_size)
@@ -400,10 +400,10 @@ class GIFEditor:
         elif position_choice == "bottom":
             text_position = (base_size[0] // 2 - text_width // 2, base_size[1] - text_height - 10)
         elif position_choice == "mouse":
-            # Use the 10th frame as reference for mouse positioning
-            ref_frame = self.frames[9].copy()
+            # Use the first frame as reference for mouse positioning
+            ref_frame = self.frames[0].copy()
             ref_image = ImageTk.PhotoImage(ref_frame)
-            
+
             top = tk.Toplevel(self.master)
             top.title("Click to Position Text")
             canvas = tk.Canvas(top, width=ref_frame.width, height=ref_frame.height)
