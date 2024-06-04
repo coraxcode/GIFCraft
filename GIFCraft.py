@@ -74,6 +74,7 @@ class GIFEditor:
         edit_menu.add_command(label="Merge Selected Frames", command=self.merge_frames)
         edit_menu.add_command(label="Add Image", command=self.add_image)
         edit_menu.add_command(label="Add Text", command=self.add_text_frame)
+        edit_menu.add_command(label="Apply Frame 1", command=self.apply_frame_1_)
         edit_menu.add_command(label="Add Overlay Frame", command=self.apply_overlay_frame)
         edit_menu.add_command(label="Add Empty Frame", command=self.add_empty_frame)
         edit_menu.add_command(label="Delete Frame(s)", command=self.delete_frames, accelerator="Del")
@@ -393,12 +394,15 @@ class GIFEditor:
         text_bbox = draw.textbbox((0, 0), text, font=font)
         text_width, text_height = text_bbox[2] - text_bbox[0], text_bbox[3] - text_bbox[1]
 
+        # Ensure the text stays within the frame dimensions
+        margin = 10  # Margin from the frame border
+
         if position_choice == "top":
-            text_position = (base_size[0] // 2 - text_width // 2, 10)
+            text_position = (max(0, (base_size[0] - text_width) // 2), margin)
         elif position_choice == "center":
-            text_position = (base_size[0] // 2 - text_width // 2, base_size[1] // 2 - text_height // 2)
+            text_position = (max(0, (base_size[0] - text_width) // 2), max(0, (base_size[1] - text_height) // 2))
         elif position_choice == "bottom":
-            text_position = (base_size[0] // 2 - text_width // 2, base_size[1] - text_height - 10)
+            text_position = (max(0, (base_size[0] - text_width) // 2), base_size[1] - text_height - margin)
         elif position_choice == "mouse":
             # Use the first frame as reference for mouse positioning
             ref_frame = self.frames[0].copy()
@@ -413,8 +417,8 @@ class GIFEditor:
             text_position = [0, 0]
 
             def on_click(event):
-                text_position[0] = event.x - text_width // 2
-                text_position[1] = event.y - text_height // 2
+                text_position[0] = min(max(0, event.x - text_width // 2), base_size[0] - text_width)
+                text_position[1] = min(max(0, event.y - text_height // 2), base_size[1] - text_height)
                 top.destroy()
 
             canvas.bind("<Button-1>", on_click)
@@ -428,12 +432,33 @@ class GIFEditor:
                         draw.text((text_position[0] + dx, text_position[1] + dy), text, font=font, fill=outline_color)
         draw.text(text_position, text, font=font, fill=text_color)
 
-        # Add the new frame to the frames list
-        self.frames.append(new_frame)
-        self.delays.append(100)  # Default delay for new frame
+        # Add the new frame to the frames list at the first position
+        self.frames.insert(0, new_frame)
+        self.delays.insert(0, 100)  # Default delay for new frame
         var = IntVar()
-        var.trace_add('write', lambda *args, i=len(self.checkbox_vars): self.set_current_frame(i))
-        self.checkbox_vars.append(var)
+        var.trace_add('write', lambda *args, i=0: self.set_current_frame(i))
+        self.checkbox_vars.insert(0, var)
+
+        self.update_frame_list()
+        self.show_frame()
+
+    def apply_frame_1_(self):
+        """Apply the content of Frame 1 to all checked frames, respecting the transparency of Frame 1."""
+        if not self.frames:
+            messagebox.showerror("Error", "No frames available to apply the effect.")
+            return
+
+        if not self.checkbox_vars[0].get():
+            messagebox.showinfo("Info", "Frame 1 is not checked. Please check Frame 1 to use it as the source frame.")
+            return
+
+        frame_1 = self.frames[0].convert("RGBA")
+
+        for i, var in enumerate(self.checkbox_vars):
+            if i != 0 and var.get() == 1:
+                target_frame = self.frames[i].convert("RGBA")
+                combined_frame = Image.alpha_composite(target_frame, frame_1)
+                self.frames[i] = combined_frame
 
         self.update_frame_list()
         self.show_frame()
