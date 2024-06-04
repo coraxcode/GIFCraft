@@ -1,3 +1,4 @@
+
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog
 from tkinter import Menu, Checkbutton, IntVar, Scrollbar, Frame, Canvas
@@ -362,22 +363,22 @@ class GIFEditor:
             return
 
         # Get text color
-        text_color = simpledialog.askstring("Text Color", "Enter text color (hex code, e.g., #FF0000 for red):")
+        text_color = simpledialog.askstring("Text Color", "Enter text color (hex code, e.g., #FF0000 for red):", initialvalue="#FFFFFF")
         if not text_color:
             return
 
         # Get outline color
-        outline_color = simpledialog.askstring("Outline Color", "Enter outline color (hex code, e.g., #000000 for black):")
+        outline_color = simpledialog.askstring("Outline Color", "Enter outline color (hex code, e.g., #000000 for black):", initialvalue="#000000")
         if not outline_color:
             return
 
         # Get outline thickness
-        outline_thickness = simpledialog.askinteger("Outline Thickness", "Enter outline thickness (0 to 5):", minvalue=0, maxvalue=5)
+        outline_thickness = simpledialog.askinteger("Outline Thickness", "Enter outline thickness (0 to 5):", initialvalue=1, minvalue=0, maxvalue=5)
         if outline_thickness is None:
             return
 
         # Get text position
-        position_choice = simpledialog.askstring("Text Position", "Enter text position (top, center, bottom, mouse):").lower()
+        position_choice = simpledialog.askstring("Text Position", "Enter text position (top, center, bottom, mouse):", initialvalue="center").lower()
         if position_choice not in ["top", "center", "bottom", "mouse"]:
             return
 
