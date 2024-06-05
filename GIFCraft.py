@@ -80,6 +80,7 @@ class GIFEditor:
         edit_menu.add_command(label="Add Overlay Frame", command=self.apply_overlay_frame)
         edit_menu.add_command(label="Add Empty Frame", command=self.add_empty_frame)
         edit_menu.add_command(label="Delete Frame(s)", command=self.delete_frames, accelerator="Del")
+        edit_menu.add_command(label="Delete Unchecked Frame(s)", command=self.delete_unchecked_frames, accelerator="Ctrl+Del") 
         edit_menu.add_separator()
         edit_menu.add_command(label="Move Selected Frames", command=self.prompt_and_move_selected_frames)
         edit_menu.add_command(label="Move Frame Up", command=self.move_frame_up, accelerator="Arrow Up")
@@ -703,6 +704,32 @@ class GIFEditor:
             del self.frames[index]
             del self.delays[index]
             del self.checkbox_vars[index]
+
+        # Update frame_index to ensure it is within the correct bounds
+        if self.frame_index >= len(self.frames):
+            self.frame_index = max(0, len(self.frames) - 1)
+
+        self.update_frame_list()
+        self.show_frame()  # Update the frame display
+
+    def delete_unchecked_frames(self, event=None):
+        """Delete all frames that are not checked in the checkbox list."""
+        if not self.frames:
+            messagebox.showerror("Error", "No frames to delete.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        indices_to_keep = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+
+        if not indices_to_keep:
+            messagebox.showinfo("Info", "No frames are checked to keep.")
+            return
+
+        # Keep only the checked frames
+        self.frames = [self.frames[i] for i in indices_to_keep]
+        self.delays = [self.delays[i] for i in indices_to_keep]
+        self.checkbox_vars = [self.checkbox_vars[i] for i in indices_to_keep]
 
         # Update frame_index to ensure it is within the correct bounds
         if self.frame_index >= len(self.frames):
@@ -1848,6 +1875,7 @@ class GIFEditor:
         self.master.bind("<Up>", self.move_frame_up)
         self.master.bind("<Down>", self.move_frame_down)
         self.master.bind("<Delete>", self.delete_frames)
+        self.master.bind("<Control-Delete>", self.delete_unchecked_frames)
         self.master.bind("<space>", self.toggle_play_pause)
         self.master.bind("<Control-c>", self.copy_frames)
         self.master.bind("<Control-C>", self.copy_frames)
