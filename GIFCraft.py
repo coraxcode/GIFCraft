@@ -455,20 +455,28 @@ class GIFEditor:
         position_combobox.set("Center")
         position_combobox.grid(row=8, column=1, padx=10, pady=5)
 
+        # Margin input
+        tk.Label(top, text="Enter margin (default is 30):").grid(row=9, column=0, padx=10, pady=5)
+        margin_entry = tk.Entry(top, width=30)
+        margin_entry.grid(row=9, column=1, padx=10, pady=5)
+        margin_entry.insert(0, "30")
+
         def submit():
             text = text_entry.get()
             font_choice = font_combobox.get()
             font_size = font_size_entry.get()
             outline_thickness = outline_thickness_entry.get()
             position_choice = position_combobox.get().lower()
+            margin = margin_entry.get()
 
-            if not text or not font_choice or not font_size.isdigit() or not outline_thickness.isdigit():
+            if not text or not font_choice or not font_size.isdigit() or not outline_thickness.isdigit() or not margin.isdigit():
                 messagebox.showerror("Error", "Please fill all fields correctly.")
                 return
 
             font_path = next((f for f in fonts if os.path.basename(f).replace('.ttf', '').replace('.otf', '') == font_choice), default_font)
             font_size = int(font_size)
             outline_thickness = int(outline_thickness)
+            margin = int(margin)
             bold = bold_var.get()
             italic = italic_var.get()
 
@@ -499,8 +507,6 @@ class GIFEditor:
             text_width, text_height = text_bbox[2] - text_bbox[0], text_bbox[3] - text_bbox[1]
 
             # Ensure the text stays within the frame dimensions
-            margin = 30  # Margin from the frame border
-
             if position_choice == "top":
                 text_position = (max(0, (base_size[0] - text_width) // 2), margin)
             elif position_choice == "center":
@@ -550,7 +556,7 @@ class GIFEditor:
             self.show_frame()
             top.destroy()
 
-        tk.Button(top, text="Add Text", command=submit).grid(row=9, column=0, columnspan=2, pady=10)
+        tk.Button(top, text="Add Text", command=submit).grid(row=10, column=0, columnspan=2, pady=10)
 
     def apply_frame_1_(self):
         """Apply the content of Frame 1 to all checked frames, respecting the transparency of Frame 1."""
