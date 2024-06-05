@@ -315,7 +315,7 @@ class GIFEditor:
 
     def add_text_frame(self):
         """Create a frame with text using user inputs for font, size, color, outline, and position."""
-
+        
         # Ensure there are frames to use as a reference for mouse positioning
         if len(self.frames) < 1:
             messagebox.showerror("Error", "There are no frames available to use as a reference.")
@@ -344,44 +344,72 @@ class GIFEditor:
             return sorted(fonts, key=lambda f: os.path.basename(f).lower())
 
         fonts = get_system_fonts()
-        default_font = 'arial.ttf' if platform.system() == 'Windows' else next((f for f in fonts if 'arial' in f.lower()), None)
+        font_names = [os.path.basename(f).replace('.ttf', '').replace('.otf', '') for f in fonts]
+        default_font = None
+
+        if platform.system() == 'Windows':
+            default_font = 'arial'
+        elif platform.system() == 'Darwin':
+            default_font = next((f for f in font_names if 'arial' in f.lower()), None)
+        elif platform.system() == 'Linux':
+            default_font = next((f for f in font_names if 'dejavusans' in f.lower()), None)
+
+        if not default_font and fonts:
+            default_font = font_names[0]
 
         if not fonts:
-            fonts = [default_font]
-        else:
-            fonts.sort()
+            messagebox.showerror("Error", "No fonts found on the system.")
+            return
 
         # Create a new window for text input
         top = tk.Toplevel(self.master)
         top.title("Add Text to Frame")
 
-        # Entry for text
-        tk.Label(top, text="Enter text to display:").grid(row=0, column=0, padx=10, pady=5)
-        text_entry = tk.Entry(top, width=30)
-        text_entry.grid(row=0, column=1, padx=10, pady=5)
+        # Preview font label
+        font_preview_label = tk.Label(top, text="Sample Text", font=(default_font, 14))
+        font_preview_label.grid(row=0, column=0, columnspan=3, padx=10, pady=10, sticky="n")
 
-        # Font selection
-        tk.Label(top, text="Choose Font:").grid(row=1, column=0, padx=10, pady=5)
-        font_combobox = ttk.Combobox(top, values=[os.path.basename(f) for f in fonts], width=28)
-        font_combobox.set(os.path.basename(default_font) if default_font else fonts[0])
-        font_combobox.grid(row=1, column=1, padx=10, pady=5)
+        # Entry for text
+        tk.Label(top, text="Enter text to display:").grid(row=1, column=0, padx=10, pady=5)
+        text_entry = tk.Entry(top, width=30)
+        text_entry.grid(row=1, column=1, padx=10, pady=5)
+
+        # Font selection with preview
+        tk.Label(top, text="Choose Font:").grid(row=2, column=0, padx=10, pady=5)
+        font_combobox = ttk.Combobox(top, values=font_names, width=28)
+        font_combobox.set(default_font)
+        font_combobox.grid(row=2, column=1, padx=10, pady=5)
+
+        def update_font_preview(event):
+            selected_font_name = font_combobox.get()
+            selected_font_path = next((f for f in fonts if os.path.basename(f).replace('.ttf', '').replace('.otf', '') == selected_font_name), None)
+            if selected_font_path:
+                try:
+                    preview_font = ImageFont.truetype(selected_font_path, 14)
+                    font_preview_label.config(font=(selected_font_name, 14))
+                except IOError:
+                    font_preview_label.config(font=("Arial", 14))
+            else:
+                font_preview_label.config(font=("Arial", 14))
+
+        font_combobox.bind("<<ComboboxSelected>>", update_font_preview)
 
         # Font size
-        tk.Label(top, text="Enter font size (in pixels):").grid(row=2, column=0, padx=10, pady=5)
+        tk.Label(top, text="Enter font size (in pixels):").grid(row=3, column=0, padx=10, pady=5)
         font_size_entry = tk.Entry(top, width=30)
-        font_size_entry.grid(row=2, column=1, padx=10, pady=5)
+        font_size_entry.grid(row=3, column=1, padx=10, pady=5)
         font_size_entry.insert(0, "20")
 
         # Bold and Italic checkboxes
         bold_var = tk.BooleanVar()
         italic_var = tk.BooleanVar()
-        tk.Checkbutton(top, text="Bold", variable=bold_var).grid(row=3, column=0, padx=10, pady=5)
-        tk.Checkbutton(top, text="Italic", variable=italic_var).grid(row=3, column=1, padx=10, pady=5)
+        tk.Checkbutton(top, text="Bold", variable=bold_var).grid(row=4, column=0, padx=10, pady=5)
+        tk.Checkbutton(top, text="Italic", variable=italic_var).grid(row=4, column=1, padx=10, pady=5)
 
         # Text color
-        tk.Label(top, text="Choose text color:").grid(row=4, column=0, padx=10, pady=5)
+        tk.Label(top, text="Choose text color:").grid(row=5, column=0, padx=10, pady=5)
         text_color_button = tk.Button(top, text="Select Color")
-        text_color_button.grid(row=4, column=1, padx=10, pady=5)
+        text_color_button.grid(row=5, column=1, padx=10, pady=5)
 
         text_color = "#FFFFFF"
         def choose_text_color():
@@ -393,9 +421,9 @@ class GIFEditor:
         text_color_button.config(command=choose_text_color)
 
         # Outline color
-        tk.Label(top, text="Choose outline color:").grid(row=5, column=0, padx=10, pady=5)
+        tk.Label(top, text="Choose outline color:").grid(row=6, column=0, padx=10, pady=5)
         outline_color_button = tk.Button(top, text="Select Color")
-        outline_color_button.grid(row=5, column=1, padx=10, pady=5)
+        outline_color_button.grid(row=6, column=1, padx=10, pady=5)
 
         outline_color = "#000000"
         def choose_outline_color():
@@ -407,16 +435,16 @@ class GIFEditor:
         outline_color_button.config(command=choose_outline_color)
 
         # Outline thickness
-        tk.Label(top, text="Enter outline thickness (0 to 5):").grid(row=6, column=0, padx=10, pady=5)
+        tk.Label(top, text="Enter outline thickness (0 to 5):").grid(row=7, column=0, padx=10, pady=5)
         outline_thickness_entry = tk.Entry(top, width=30)
-        outline_thickness_entry.grid(row=6, column=1, padx=10, pady=5)
+        outline_thickness_entry.grid(row=7, column=1, padx=10, pady=5)
 
         # Text position
-        tk.Label(top, text="Choose text position:").grid(row=7, column=0, padx=10, pady=5)
+        tk.Label(top, text="Choose text position:").grid(row=8, column=0, padx=10, pady=5)
         position_options = ["Top", "Center", "Bottom", "Mouse"]
         position_combobox = ttk.Combobox(top, values=position_options, width=28)
         position_combobox.set("Center")
-        position_combobox.grid(row=7, column=1, padx=10, pady=5)
+        position_combobox.grid(row=8, column=1, padx=10, pady=5)
 
         def submit():
             text = text_entry.get()
@@ -429,7 +457,7 @@ class GIFEditor:
                 messagebox.showerror("Error", "Please fill all fields correctly.")
                 return
 
-            font_path = next((f for f in fonts if os.path.basename(f) == font_choice), default_font)
+            font_path = next((f for f in fonts if os.path.basename(f).replace('.ttf', '').replace('.otf', '') == font_choice), default_font)
             font_size = int(font_size)
             outline_thickness = int(outline_thickness)
             bold = bold_var.get()
@@ -462,7 +490,7 @@ class GIFEditor:
             text_width, text_height = text_bbox[2] - text_bbox[0], text_bbox[3] - text_bbox[1]
 
             # Ensure the text stays within the frame dimensions
-            margin = 10  # Margin from the frame border
+            margin = 30  # Margin from the frame border
 
             if position_choice == "top":
                 text_position = (max(0, (base_size[0] - text_width) // 2), margin)
@@ -470,6 +498,9 @@ class GIFEditor:
                 text_position = (max(0, (base_size[0] - text_width) // 2), max(0, (base_size[1] - text_height) // 2))
             elif position_choice == "bottom":
                 text_position = (max(0, (base_size[0] - text_width) // 2), base_size[1] - text_height - margin)
+                # Ensure the text stays within the frame dimensions
+                if text_position[1] + text_height > base_size[1] - margin:
+                    text_position = (text_position[0], base_size[1] - text_height - margin)
             elif position_choice == "mouse":
                 # Use the first frame as reference for mouse positioning
                 ref_frame = self.frames[0].copy()
@@ -510,7 +541,7 @@ class GIFEditor:
             self.show_frame()
             top.destroy()
 
-        tk.Button(top, text="Add Text", command=submit).grid(row=8, column=0, columnspan=2, pady=10)
+        tk.Button(top, text="Add Text", command=submit).grid(row=9, column=0, columnspan=2, pady=10)
 
     def apply_frame_1_(self):
         """Apply the content of Frame 1 to all checked frames, respecting the transparency of Frame 1."""
