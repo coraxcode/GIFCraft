@@ -23,6 +23,7 @@ class GIFEditor:
         self.current_file = None
         self.checkbox_vars = []
         self.check_all = tk.BooleanVar(value=False)
+        self.is_preview_mode = False
         self.preview_width = 200
         self.preview_height = 150
 
@@ -129,6 +130,7 @@ class GIFEditor:
         animation_menu = Menu(self.menu_bar, tearoff=0)
         animation_menu.add_command(label="Play/Stop Animation", command=self.toggle_play_pause, accelerator="Space")
         animation_menu.add_command(label="Change Preview Resolution", command=self.change_preview_resolution)
+        animation_menu.add_command(label="Transparent preview", command=self.toggle_transparent_preview, accelerator="P") 
         self.menu_bar.add_cascade(label="Animation", menu=animation_menu)
 
     def create_help_menu(self):
@@ -1668,13 +1670,73 @@ class GIFEditor:
             except ValueError:
                 messagebox.showerror("Invalid Format", "Please enter the resolution in the format '800x600'.")
 
-    def play_next_frame(self):
-        """Play the next frame in the animation."""
-        if self.is_playing and self.frames:
+    def toggle_transparent_preview(self, event=None):
+        """Toggle transparent preview for frames with checked checkboxes."""
+        if self.is_preview_mode:
+            self.exit_preview_mode()
+        else:
+            self.enter_preview_mode()
+
+    def enter_preview_mode(self):
+        """Enter the transparent preview mode."""
+        self.is_preview_mode = True
+
+        # Generate the composite image of all checked frames with transparency
+        composite_frame = Image.new("RGBA", self.frames[0].size, (255, 255, 255, 0))
+        transparency_factor = 0.5  # Adjust transparency factor as needed
+        checked_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+
+        if not checked_indices:
+            messagebox.showinfo("Preview Mode", "No frames are checked for preview.")
+            self.is_preview_mode = False
+            return
+
+        # Iterate through the checked frames
+        for idx, i in enumerate(checked_indices):
+            frame = self.frames[i].copy()
+            if idx != 0:  # Only make frames transparent and black and white if not the first checked frame
+                frame = frame.convert("L").convert("RGBA")  # Convert to black and white
+                alpha = frame.split()[3]
+                alpha = ImageEnhance.Brightness(alpha).enhance(transparency_factor)
+                frame.putalpha(alpha)
+            composite_frame = Image.alpha_composite(composite_frame, frame)
+
+        # Add 'p' indicator in the top right corner
+        draw = ImageDraw.Draw(composite_frame)
+        font_size = 20
+        try:
+            font = ImageFont.truetype("arial.ttf", font_size)  # Ensure you have a font file available
+        except IOError:
+            font = ImageFont.load_default()  # Fall back to default font if specified font is not available
+        text = "p"
+        text_position = (composite_frame.width - font_size - 10, 10)
+        text_color = (255, 0, 0, 255)  # Red color for visibility
+        draw.text(text_position, text, font=font, fill=text_color)
+
+        # Display the composite image
+        preview = self.resize_image(composite_frame, max_width=self.preview_width, max_height=self.preview_height)
+        photo = ImageTk.PhotoImage(preview)
+        self.image_label.config(image=photo)
+        self.image_label.image = photo
+
+        # Bind all key events to exit preview mode
+        self.master.bind_all("<Key>", self.exit_preview_mode)
+
+    def exit_preview_mode(self, event=None):
+        """Exit the preview mode and return to normal mode."""
+        if self.is_preview_mode:
+            self.is_preview_mode = False
             self.show_frame()
-            delay = self.delays[self.frame_index]
-            self.frame_index = (self.frame_index + 1) % len(self.frames)
-            self.master.after(delay, self.play_next_frame)
+            # Unbind the key event
+            self.master.unbind_all("<Key>")
+
+        def play_next_frame(self):
+            """Play the next frame in the animation."""
+            if self.is_playing and self.frames:
+                self.show_frame()
+                delay = self.delays[self.frame_index]
+                self.frame_index = (self.frame_index + 1) % len(self.frames)
+                self.master.after(delay, self.play_next_frame)
 
     def set_delay(self, event=None):
         """Set the delay for the selected frames."""
@@ -1801,6 +1863,8 @@ class GIFEditor:
         self.master.bind("X", self.toggle_checkbox)
         self.master.bind("a", self.toggle_check_all)
         self.master.bind("A", self.toggle_check_all)
+        self.master.bind("p", self.toggle_transparent_preview)
+        self.master.bind("P", self.toggle_transparent_preview)
         self.master.bind("d", self.focus_delay_entry)
         self.master.bind("D", self.focus_delay_entry)
 
