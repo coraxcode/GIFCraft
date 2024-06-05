@@ -1,9 +1,10 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog
+from tkinter import filedialog, messagebox, simpledialog, ttk, colorchooser
 from tkinter import Menu, Checkbutton, IntVar, Scrollbar, Frame, Canvas
 from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageSequence, ImageOps, ImageEnhance, ImageFilter
 import os
 import random
+import platform
 
 class GIFEditor:
     def __init__(self, master):
@@ -320,110 +321,196 @@ class GIFEditor:
             messagebox.showerror("Error", "There are no frames available to use as a reference.")
             return
 
-        # Get text from user
-        text = simpledialog.askstring("Add Text", "Enter text to display:")
-        if not text:
-            return
+        def get_system_fonts():
+            """Retrieve a list of system fonts available on the user's machine."""
+            font_dirs = []
+            if platform.system() == "Windows":
+                windir = os.environ.get('WINDIR')
+                if windir:
+                    font_dirs = [os.path.join(windir, 'Fonts')]
+            elif platform.system() == "Darwin":  # macOS
+                font_dirs = ["/Library/Fonts", "~/Library/Fonts"]
+            elif platform.system() == "Linux":
+                font_dirs = ["/usr/share/fonts", "~/.local/share/fonts", "~/.fonts"]
 
-        # Get available fonts
-        font_directory = '/usr/share/fonts/truetype'
-        fonts = [f[:-4] for f in os.listdir(font_directory) if f.endswith('.ttf')]
+            fonts = set()
+            for font_dir in font_dirs:
+                font_dir = os.path.expanduser(font_dir)
+                if os.path.isdir(font_dir):
+                    for root, _, files in os.walk(font_dir):
+                        for file in files:
+                            if file.lower().endswith(('.ttf', '.otf')):
+                                fonts.add(os.path.join(root, file))
+            return sorted(fonts, key=lambda f: os.path.basename(f).lower())
 
-        # Use default font if no fonts are found
-        default_font = 'DejaVuSans-Bold'
+        fonts = get_system_fonts()
+        default_font = 'arial.ttf' if platform.system() == 'Windows' else next((f for f in fonts if 'arial' in f.lower()), None)
+
         if not fonts:
-            font_choice = default_font
+            fonts = [default_font]
         else:
-            font_choice = simpledialog.askstring("Choose Font", f"Available fonts:\n{', '.join(fonts)}\nEnter font name (default: {default_font}):")
-            if not font_choice or font_choice not in fonts:
-                font_choice = default_font
+            fonts.sort()
 
-        font_path = os.path.join(font_directory, f"{font_choice}.ttf")
+        # Create a new window for text input
+        top = tk.Toplevel(self.master)
+        top.title("Add Text to Frame")
 
-        # Get font size
-        font_size = simpledialog.askinteger("Font Size", "Enter font size (in pixels):", minvalue=1)
-        if font_size is None:
-            return
+        # Entry for text
+        tk.Label(top, text="Enter text to display:").grid(row=0, column=0, padx=10, pady=5)
+        text_entry = tk.Entry(top, width=30)
+        text_entry.grid(row=0, column=1, padx=10, pady=5)
 
-        # Get text color
-        text_color = simpledialog.askstring("Text Color", "Enter text color (hex code, e.g., #FF0000 for red):", initialvalue="#FFFFFF")
-        if not text_color:
-            return
+        # Font selection
+        tk.Label(top, text="Choose Font:").grid(row=1, column=0, padx=10, pady=5)
+        font_combobox = ttk.Combobox(top, values=[os.path.basename(f) for f in fonts], width=28)
+        font_combobox.set(os.path.basename(default_font) if default_font else fonts[0])
+        font_combobox.grid(row=1, column=1, padx=10, pady=5)
 
-        # Get outline color
-        outline_color = simpledialog.askstring("Outline Color", "Enter outline color (hex code, e.g., #000000 for black):", initialvalue="#000000")
-        if not outline_color:
-            return
+        # Font size
+        tk.Label(top, text="Enter font size (in pixels):").grid(row=2, column=0, padx=10, pady=5)
+        font_size_entry = tk.Entry(top, width=30)
+        font_size_entry.grid(row=2, column=1, padx=10, pady=5)
+        font_size_entry.insert(0, "20")
 
-        # Get outline thickness
-        outline_thickness = simpledialog.askinteger("Outline Thickness", "Enter outline thickness (0 to 5):", initialvalue=1, minvalue=0, maxvalue=5)
-        if outline_thickness is None:
-            return
+        # Bold and Italic checkboxes
+        bold_var = tk.BooleanVar()
+        italic_var = tk.BooleanVar()
+        tk.Checkbutton(top, text="Bold", variable=bold_var).grid(row=3, column=0, padx=10, pady=5)
+        tk.Checkbutton(top, text="Italic", variable=italic_var).grid(row=3, column=1, padx=10, pady=5)
 
-        # Get text position
-        position_choice = simpledialog.askstring("Text Position", "Enter text position (top, center, bottom, mouse):", initialvalue="center").lower()
-        if position_choice not in ["top", "center", "bottom", "mouse"]:
-            return
+        # Text color
+        tk.Label(top, text="Choose text color:").grid(row=4, column=0, padx=10, pady=5)
+        text_color_button = tk.Button(top, text="Select Color")
+        text_color_button.grid(row=4, column=1, padx=10, pady=5)
 
-        # Create a new transparent frame
-        base_size = self.frames[0].size
-        new_frame = Image.new("RGBA", base_size, (0, 0, 0, 0))
+        text_color = "#FFFFFF"
+        def choose_text_color():
+            nonlocal text_color
+            color_code = colorchooser.askcolor(title="Choose text color")
+            if color_code:
+                text_color = color_code[1]
 
-        # Load the font
-        font = ImageFont.truetype(font_path, font_size)
-        draw = ImageDraw.Draw(new_frame)
+        text_color_button.config(command=choose_text_color)
 
-        # Calculate text size and position
-        text_bbox = draw.textbbox((0, 0), text, font=font)
-        text_width, text_height = text_bbox[2] - text_bbox[0], text_bbox[3] - text_bbox[1]
+        # Outline color
+        tk.Label(top, text="Choose outline color:").grid(row=5, column=0, padx=10, pady=5)
+        outline_color_button = tk.Button(top, text="Select Color")
+        outline_color_button.grid(row=5, column=1, padx=10, pady=5)
 
-        # Ensure the text stays within the frame dimensions
-        margin = 10  # Margin from the frame border
+        outline_color = "#000000"
+        def choose_outline_color():
+            nonlocal outline_color
+            color_code = colorchooser.askcolor(title="Choose outline color")
+            if color_code:
+                outline_color = color_code[1]
 
-        if position_choice == "top":
-            text_position = (max(0, (base_size[0] - text_width) // 2), margin)
-        elif position_choice == "center":
-            text_position = (max(0, (base_size[0] - text_width) // 2), max(0, (base_size[1] - text_height) // 2))
-        elif position_choice == "bottom":
-            text_position = (max(0, (base_size[0] - text_width) // 2), base_size[1] - text_height - margin)
-        elif position_choice == "mouse":
-            # Use the first frame as reference for mouse positioning
-            ref_frame = self.frames[0].copy()
-            ref_image = ImageTk.PhotoImage(ref_frame)
+        outline_color_button.config(command=choose_outline_color)
 
-            top = tk.Toplevel(self.master)
-            top.title("Click to Position Text")
-            canvas = tk.Canvas(top, width=ref_frame.width, height=ref_frame.height)
-            canvas.pack()
-            canvas.create_image(0, 0, anchor=tk.NW, image=ref_image)
+        # Outline thickness
+        tk.Label(top, text="Enter outline thickness (0 to 5):").grid(row=6, column=0, padx=10, pady=5)
+        outline_thickness_entry = tk.Entry(top, width=30)
+        outline_thickness_entry.grid(row=6, column=1, padx=10, pady=5)
 
-            text_position = [0, 0]
+        # Text position
+        tk.Label(top, text="Choose text position:").grid(row=7, column=0, padx=10, pady=5)
+        position_options = ["Top", "Center", "Bottom", "Mouse"]
+        position_combobox = ttk.Combobox(top, values=position_options, width=28)
+        position_combobox.set("Center")
+        position_combobox.grid(row=7, column=1, padx=10, pady=5)
 
-            def on_click(event):
-                text_position[0] = min(max(0, event.x - text_width // 2), base_size[0] - text_width)
-                text_position[1] = min(max(0, event.y - text_height // 2), base_size[1] - text_height)
-                top.destroy()
+        def submit():
+            text = text_entry.get()
+            font_choice = font_combobox.get()
+            font_size = font_size_entry.get()
+            outline_thickness = outline_thickness_entry.get()
+            position_choice = position_combobox.get().lower()
 
-            canvas.bind("<Button-1>", on_click)
-            self.master.wait_window(top)
+            if not text or not font_choice or not font_size.isdigit() or not outline_thickness.isdigit():
+                messagebox.showerror("Error", "Please fill all fields correctly.")
+                return
 
-        # Draw text with outline
-        if outline_thickness > 0:
-            for dx in range(-outline_thickness, outline_thickness + 1):
-                for dy in range(-outline_thickness, outline_thickness + 1):
-                    if dx != 0 or dy != 0:
-                        draw.text((text_position[0] + dx, text_position[1] + dy), text, font=font, fill=outline_color)
-        draw.text(text_position, text, font=font, fill=text_color)
+            font_path = next((f for f in fonts if os.path.basename(f) == font_choice), default_font)
+            font_size = int(font_size)
+            outline_thickness = int(outline_thickness)
+            bold = bold_var.get()
+            italic = italic_var.get()
 
-        # Add the new frame to the frames list at the first position
-        self.frames.insert(0, new_frame)
-        self.delays.insert(0, 100)  # Default delay for new frame
-        var = IntVar()
-        var.trace_add('write', lambda *args, i=0: self.set_current_frame(i))
-        self.checkbox_vars.insert(0, var)
+            if bold and italic:
+                font_style = "bolditalic"
+            elif bold:
+                font_style = "bold"
+            elif italic:
+                font_style = "italic"
+            else:
+                font_style = "regular"
 
-        self.update_frame_list()
-        self.show_frame()
+            # Create a new transparent frame
+            base_size = self.frames[0].size
+            new_frame = Image.new("RGBA", base_size, (0, 0, 0, 0))
+
+            # Load the font
+            try:
+                font = ImageFont.truetype(font_path, font_size)
+            except IOError:
+                messagebox.showerror("Error", f"Failed to load font: {font_choice}. Using default font.")
+                font = ImageFont.truetype(default_font, font_size)
+
+            draw = ImageDraw.Draw(new_frame)
+
+            # Calculate text size and position
+            text_bbox = draw.textbbox((0, 0), text, font=font)
+            text_width, text_height = text_bbox[2] - text_bbox[0], text_bbox[3] - text_bbox[1]
+
+            # Ensure the text stays within the frame dimensions
+            margin = 10  # Margin from the frame border
+
+            if position_choice == "top":
+                text_position = (max(0, (base_size[0] - text_width) // 2), margin)
+            elif position_choice == "center":
+                text_position = (max(0, (base_size[0] - text_width) // 2), max(0, (base_size[1] - text_height) // 2))
+            elif position_choice == "bottom":
+                text_position = (max(0, (base_size[0] - text_width) // 2), base_size[1] - text_height - margin)
+            elif position_choice == "mouse":
+                # Use the first frame as reference for mouse positioning
+                ref_frame = self.frames[0].copy()
+                ref_image = ImageTk.PhotoImage(ref_frame)
+
+                mouse_top = tk.Toplevel(self.master)
+                mouse_top.title("Click to Position Text")
+                canvas = tk.Canvas(mouse_top, width=ref_frame.width, height=ref_frame.height)
+                canvas.pack()
+                canvas.create_image(0, 0, anchor=tk.NW, image=ref_image)
+
+                text_position = [0, 0]
+
+                def on_click(event):
+                    text_position[0] = min(max(0, event.x - text_width // 2), base_size[0] - text_width)
+                    text_position[1] = min(max(0, event.y - text_height // 2), base_size[1] - text_height)
+                    mouse_top.destroy()
+
+                canvas.bind("<Button-1>", on_click)
+                self.master.wait_window(mouse_top)
+
+            # Draw text with outline
+            if outline_thickness > 0:
+                for dx in range(-outline_thickness, outline_thickness + 1):
+                    for dy in range(-outline_thickness, outline_thickness + 1):
+                        if dx != 0 or dy != 0:
+                            draw.text((text_position[0] + dx, text_position[1] + dy), text, font=font, fill=outline_color)
+            draw.text(text_position, text, font=font, fill=text_color)
+
+            # Add the new frame to the frames list at the first position
+            self.frames.insert(0, new_frame)
+            self.delays.insert(0, 100)  # Default delay for new frame
+            var = tk.IntVar()
+            var.trace_add('write', lambda *args, i=0: self.set_current_frame(i))
+            self.checkbox_vars.insert(0, var)
+
+            self.update_frame_list()
+            self.show_frame()
+            top.destroy()
+
+        tk.Button(top, text="Add Text", command=submit).grid(row=8, column=0, columnspan=2, pady=10)
 
     def apply_frame_1_(self):
         """Apply the content of Frame 1 to all checked frames, respecting the transparency of Frame 1."""
