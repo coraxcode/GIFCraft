@@ -1718,9 +1718,11 @@ class GIFEditor:
         """Enter the transparent preview mode."""
         self.is_preview_mode = True
 
-        # Generate the composite image of all checked frames with transparency
-        composite_frame = Image.new("RGBA", self.frames[0].size, (255, 255, 255, 0))
-        transparency_factor = 0.5  # Adjust transparency factor as needed
+        if not self.frames:
+            messagebox.showinfo("Preview Mode", "No frames available for preview.")
+            self.is_preview_mode = False
+            return
+
         checked_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
 
         if not checked_indices:
@@ -1728,8 +1730,20 @@ class GIFEditor:
             self.is_preview_mode = False
             return
 
+        # Ensure the first checked frame index exists
+        if checked_indices[0] >= len(self.frames):
+            messagebox.showerror("Error", "Checked frame index is out of range.")
+            self.is_preview_mode = False
+            return
+
+        composite_frame = Image.new("RGBA", self.frames[0].size, (255, 255, 255, 0))
+        transparency_factor = 0.5  # Adjust transparency factor as needed
+
         # Iterate through the checked frames
         for idx, i in enumerate(checked_indices):
+            if i >= len(self.frames):
+                continue  # Skip if index is out of range
+
             frame = self.frames[i].copy()
             if idx != 0:  # Only make frames transparent and black and white if not the first checked frame
                 frame = frame.convert("L").convert("RGBA")  # Convert to black and white
@@ -1738,7 +1752,7 @@ class GIFEditor:
                 frame.putalpha(alpha)
             composite_frame = Image.alpha_composite(composite_frame, frame)
 
-        # Add 'p' indicator in the top right corner
+        # Add 'T' indicator in the top right corner
         draw = ImageDraw.Draw(composite_frame)
         font_size = 20
         try:
