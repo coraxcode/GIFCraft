@@ -1962,6 +1962,8 @@ class GIFEditor:
     def show_frame(self):
         """Display the current frame."""
         if self.frames:
+            if self.frame_index >= len(self.frames):
+                self.frame_index = len(self.frames) - 1  # Ensure the frame index is within bounds
             frame = self.frames[self.frame_index]
             preview = self.resize_image(frame, max_width=self.preview_width, max_height=self.preview_height)
             photo = ImageTk.PhotoImage(preview)
