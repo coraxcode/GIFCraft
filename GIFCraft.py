@@ -27,6 +27,15 @@ class GIFEditor:
         self.preview_width = 200
         self.preview_height = 150
 
+        # Draw mode settings
+        self.is_draw_mode = False
+        self.brush_color = "#000000"
+        self.brush_size = 5
+        self.tool = 'brush'
+        self.is_drawing = False
+        self.last_x = None
+        self.last_y = None
+
         # Setup UI and bindings
         self.setup_ui()
         self.bind_keyboard_events()
@@ -131,7 +140,8 @@ class GIFEditor:
         animation_menu = Menu(self.menu_bar, tearoff=0)
         animation_menu.add_command(label="Play/Stop Animation", command=self.toggle_play_pause, accelerator="Space")
         animation_menu.add_command(label="Change Preview Resolution", command=self.change_preview_resolution)
-        animation_menu.add_command(label="Transparent preview", command=self.toggle_transparent_preview, accelerator="P") 
+        animation_menu.add_command(label="Transparent Frames Preview", command=self.toggle_transparent_frames_preview, accelerator="T")
+        animation_menu.add_command(label="Draw Mode", command=self.toggle_draw_mode, accelerator="W")
         self.menu_bar.add_cascade(label="Animation", menu=animation_menu)
 
     def create_help_menu(self):
@@ -1697,7 +1707,7 @@ class GIFEditor:
             except ValueError:
                 messagebox.showerror("Invalid Format", "Please enter the resolution in the format '800x600'.")
 
-    def toggle_transparent_preview(self, event=None):
+    def toggle_transparent_frames_preview(self, event=None):
         """Toggle transparent preview for frames with checked checkboxes."""
         if self.is_preview_mode:
             self.exit_preview_mode()
@@ -1735,7 +1745,7 @@ class GIFEditor:
             font = ImageFont.truetype("arial.ttf", font_size)  # Ensure you have a font file available
         except IOError:
             font = ImageFont.load_default()  # Fall back to default font if specified font is not available
-        text = "p"
+        text = "T"
         text_position = (composite_frame.width - font_size - 10, 10)
         text_color = (255, 0, 0, 255)  # Red color for visibility
         draw.text(text_position, text, font=font, fill=text_color)
@@ -1757,13 +1767,118 @@ class GIFEditor:
             # Unbind the key event
             self.master.unbind_all("<Key>")
 
-        def play_next_frame(self):
-            """Play the next frame in the animation."""
-            if self.is_playing and self.frames:
+    def play_next_frame(self):
+        """Play the next frame in the animation."""
+        if self.is_playing and self.frames:
+            self.show_frame()
+            delay = self.delays[self.frame_index]
+            self.frame_index = (self.frame_index + 1) % len(self.frames)
+            self.master.after(delay, self.play_next_frame)
+            
+    def toggle_draw_mode(self, event=None):
+        """Toggle draw mode on and off."""
+        self.save_state()  # Save the state before making changes
+        
+        # Check if any checkbox is marked
+        if not any(var.get() for var in self.checkbox_vars):
+            messagebox.showwarning("Draw Mode", "No frame is selected for drawing.")
+            self.is_draw_mode = False
+            return
+        
+        self.is_draw_mode = not self.is_draw_mode
+        if self.is_draw_mode:
+            # Ensure the current frame is marked
+            if not self.checkbox_vars[self.frame_index].get():
+                messagebox.showwarning("Draw Mode", "Current frame must be selected for drawing.")
+                self.is_draw_mode = False
+                return
+            
+            # Bind events for drawing and tool selection
+            self.master.bind("<Motion>", self.draw)
+            self.master.bind("<Button-1>", self.start_drawing)
+            self.master.bind("<ButtonRelease-1>", self.stop_drawing)
+            self.master.bind("<Key-1>", self.set_tool_brush)
+            self.master.bind("<Key-2>", self.set_tool_eraser)
+            self.master.bind("<Key-3>", self.set_tool_color)
+            self.master.bind("<bracketleft>", self.decrease_brush_size)
+            self.master.bind("<bracketright>", self.increase_brush_size)
+            messagebox.showinfo("Draw Mode", "Entered Draw Mode")
+        else:
+            # Unbind events when exiting draw mode
+            self.master.unbind("<Motion>")
+            self.master.unbind("<Button-1>")
+            self.master.unbind("<ButtonRelease-1>")
+            self.master.unbind("<Key-1>")
+            self.master.unbind("<Key-2>")
+            self.master.unbind("<Key-3>")
+            self.master.unbind("<bracketleft>")
+            self.master.unbind("<bracketright>")
+            messagebox.showinfo("Draw Mode", "Exited Draw Mode")
+
+    def set_tool_brush(self, event=None):
+        """Set the drawing tool to brush and display an infobox."""
+        self.set_tool('brush')
+        messagebox.showinfo("Tool Selected", "Selected Tool: Brush")
+
+    def set_tool_eraser(self, event=None):
+        """Set the drawing tool to eraser and display an infobox."""
+        self.set_tool('eraser')
+        messagebox.showinfo("Tool Selected", "Selected Tool: Eraser")
+
+    def set_tool_color(self, event=None):
+        """Open color chooser, set brush color, and display an infobox."""
+        self.choose_color()
+        messagebox.showinfo("Tool Selected", "Selected Tool: Color")
+
+    def decrease_brush_size(self, event=None):
+        """Decrease the brush size and display the new size in an infobox."""
+        self.change_brush_size(-1)
+        messagebox.showinfo("Brush Size", f"Brush size changed to: {self.brush_size}")
+
+    def increase_brush_size(self, event=None):
+        """Increase the brush size and display the new size in an infobox."""
+        self.change_brush_size(1)
+        messagebox.showinfo("Brush Size", f"Brush size changed to: {self.brush_size}")
+
+    def set_tool(self, tool):
+        """Set the current drawing tool."""
+        self.tool = tool
+
+    def choose_color(self):
+        """Open a color chooser dialog to select the brush color."""
+        color = colorchooser.askcolor()[1]
+        if color:
+            self.brush_color = color
+
+    def change_brush_size(self, delta):
+        """Change the brush size."""
+        new_size = self.brush_size + delta
+        if new_size > 0:
+            self.brush_size = new_size
+
+    def start_drawing(self, event):
+        """Start drawing on the canvas."""
+        self.is_drawing = True
+        self.last_x, self.last_y = event.x, event.y
+
+    def stop_drawing(self, event):
+        """Stop drawing on the canvas."""
+        self.is_drawing = False
+
+    def draw(self, event):
+        """Draw on the canvas."""
+        if self.is_draw_mode and self.is_drawing:
+            x, y = event.x, event.y
+            if self.checkbox_vars[self.frame_index].get() == 1:
+                frame = self.frames[self.frame_index].copy()
+                draw = ImageDraw.Draw(frame)
+                if self.tool == 'brush':
+                    draw.line([self.last_x, self.last_y, x, y], fill=self.brush_color, width=self.brush_size)
+                elif self.tool == 'eraser':
+                    draw.line([self.last_x, self.last_y, x, y], fill=(255, 255, 255, 0), width=self.brush_size)
+                self.frames[self.frame_index] = frame
+                self.last_x, self.last_y = x, y
                 self.show_frame()
-                delay = self.delays[self.frame_index]
-                self.frame_index = (self.frame_index + 1) % len(self.frames)
-                self.master.after(delay, self.play_next_frame)
 
     def set_delay(self, event=None):
         """Set the delay for the selected frames."""
@@ -1889,10 +2004,12 @@ class GIFEditor:
         self.master.bind("<Control-S>", self.save_as)
         self.master.bind("x", self.toggle_checkbox)
         self.master.bind("X", self.toggle_checkbox)
+        self.master.bind("w", self.toggle_draw_mode)
+        self.master.bind("W", self.toggle_draw_mode)
         self.master.bind("a", self.toggle_check_all)
         self.master.bind("A", self.toggle_check_all)
-        self.master.bind("p", self.toggle_transparent_preview)
-        self.master.bind("P", self.toggle_transparent_preview)
+        self.master.bind("t", self.toggle_transparent_frames_preview)
+        self.master.bind("T", self.toggle_transparent_frames_preview)
         self.master.bind("d", self.focus_delay_entry)
         self.master.bind("D", self.focus_delay_entry)
 
