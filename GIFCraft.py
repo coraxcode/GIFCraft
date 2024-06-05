@@ -1778,13 +1778,13 @@ class GIFEditor:
     def toggle_draw_mode(self, event=None):
         """Toggle draw mode on and off."""
         self.save_state()  # Save the state before making changes
-        
+
         # Check if any checkbox is marked
         if not any(var.get() for var in self.checkbox_vars):
             messagebox.showwarning("Draw Mode", "No frame is selected for drawing.")
             self.is_draw_mode = False
             return
-        
+
         self.is_draw_mode = not self.is_draw_mode
         if self.is_draw_mode:
             # Ensure the current frame is marked
@@ -1792,7 +1792,7 @@ class GIFEditor:
                 messagebox.showwarning("Draw Mode", "Current frame must be selected for drawing.")
                 self.is_draw_mode = False
                 return
-            
+
             # Bind events for drawing and tool selection
             self.master.bind("<Motion>", self.draw)
             self.master.bind("<Button-1>", self.start_drawing)
@@ -1859,7 +1859,7 @@ class GIFEditor:
     def start_drawing(self, event):
         """Start drawing on the canvas."""
         self.is_drawing = True
-        self.last_x, self.last_y = event.x, event.y
+        self.last_x, self.last_y = self.scale_coordinates(event.x, event.y)
 
     def stop_drawing(self, event):
         """Stop drawing on the canvas."""
@@ -1868,7 +1868,7 @@ class GIFEditor:
     def draw(self, event):
         """Draw on the canvas."""
         if self.is_draw_mode and self.is_drawing:
-            x, y = event.x, event.y
+            x, y = self.scale_coordinates(event.x, event.y)
             if self.checkbox_vars[self.frame_index].get() == 1:
                 frame = self.frames[self.frame_index].copy()
                 draw = ImageDraw.Draw(frame)
@@ -1879,6 +1879,34 @@ class GIFEditor:
                 self.frames[self.frame_index] = frame
                 self.last_x, self.last_y = x, y
                 self.show_frame()
+
+    def scale_coordinates(self, x, y):
+        """Scale the coordinates based on the current preview resolution."""
+        original_width, original_height = self.frames[self.frame_index].size
+        scale_x = original_width / self.preview_width
+        scale_y = original_height / self.preview_height
+        return int(x * scale_x), int(y * scale_y)
+
+    def change_preview_resolution(self):
+        """Change the preview resolution based on user input."""
+        MAX_WIDTH = 2560
+        MAX_HEIGHT = 1600
+
+        resolution = simpledialog.askstring("Change Preview Resolution", "Enter new resolution (e.g., 800x600):")
+        if resolution:
+            try:
+                width, height = map(int, resolution.split('x'))
+                if width > 0 and height > 0:
+                    if width <= MAX_WIDTH and height <= MAX_HEIGHT:
+                        self.preview_width = width
+                        self.preview_height = height
+                        self.show_frame()  # Update the displayed frame with new resolution
+                    else:
+                        messagebox.showerror("Invalid Resolution", f"Resolution exceeds the maximum allowed size of {MAX_WIDTH}x{MAX_HEIGHT}.")
+                else:
+                    messagebox.showerror("Invalid Resolution", "Width and height must be positive integers.")
+            except ValueError:
+                messagebox.showerror("Invalid Format", "Please enter the resolution in the format '800x600'.")
 
     def set_delay(self, event=None):
         """Set the delay for the selected frames."""
