@@ -161,6 +161,15 @@ class GIFEditor:
 
     def load_file(self, event=None):
         """Load a GIF, PNG, or WebP file and extract its frames."""
+        if self.frames:
+            response = messagebox.askyesnocancel("Unsaved Changes", "Do you want to save the current file before loading a new one?")
+            if response:  # Yes
+                self.save()
+                if self.frames:  # If saving was cancelled or failed, do not proceed
+                    return
+            elif response is None:  # Cancel
+                return
+
         file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.gif *.png *.webp")])
         if not file_path:
             return
@@ -1358,18 +1367,31 @@ class GIFEditor:
 
     def apply_zoom_and_speed_blur_effect(self):
         """Prompt user to apply a zoom or speed blur effect to selected frames."""
-        effect_type = simpledialog.askstring("Choose Effect", "Enter effect type (zoom or speed):").strip().lower()
+        # Check if there is at least one frame selected
+        if not any(var.get() for var in self.checkbox_vars):
+            messagebox.showinfo("Info", "No frames selected for applying the effect.")
+            return
+
+        # Prompt user for effect type
+        effect_type = simpledialog.askstring("Choose Effect", "Enter effect type (zoom or speed):")
+        if effect_type is None:
+            return  # User cancelled
+        effect_type = effect_type.strip().lower()
         if effect_type not in ["zoom", "speed"]:
             messagebox.showerror("Invalid Input", "Please enter a valid effect type: 'zoom' or 'speed'.")
             return
 
+        # Prompt user for intensity
         intensity = simpledialog.askfloat("Effect Intensity", "Enter intensity (e.g., 1.2 for zoom, 5 for speed):", minvalue=0.1)
-        if intensity is None or intensity < 0.1:
-            messagebox.showerror("Invalid Input", "Please enter a valid intensity value.")
-            return
+        if intensity is None:
+            return  # User cancelled
 
+        # Handle speed blur specific input
         if effect_type == "speed":
-            direction = simpledialog.askstring("Speed Blur Direction", "Enter direction (right, left, top, bottom):").strip().lower()
+            direction = simpledialog.askstring("Speed Blur Direction", "Enter direction (right, left, top, bottom):")
+            if direction is None:
+                return  # User cancelled
+            direction = direction.strip().lower()
             if direction not in ["right", "left", "top", "bottom"]:
                 messagebox.showerror("Invalid Input", "Please enter a valid direction: 'right', 'left', 'top', 'bottom'.")
                 return
@@ -1390,7 +1412,7 @@ class GIFEditor:
     def apply_zoom_blur(self, frame, intensity):
         """Apply a zoom blur effect to a frame."""
         width, height = frame.size
-        
+
         zoomed_frame = frame.copy()
         for i in range(1, int(intensity * 10) + 1):
             zoom_factor = 1 + i * 0.01
@@ -1402,13 +1424,13 @@ class GIFEditor:
                 (layer.height + height) // 2
             ))
             zoomed_frame = Image.blend(zoomed_frame, layer, alpha=0.05)
-        
+
         return zoomed_frame
 
     def apply_speed_blur(self, frame, intensity, direction):
         """Apply a speed blur effect to a frame in the specified direction."""
         width, height = frame.size
-        
+
         speed_blur_frame = frame.copy()
         for i in range(1, int(intensity * 10) + 1):
             offset = int(i * 2)
@@ -1427,9 +1449,8 @@ class GIFEditor:
                 resample=Image.BICUBIC
             )
             speed_blur_frame = Image.blend(speed_blur_frame, layer, alpha=0.05)
-        
-        return speed_blur_frame
 
+        return speed_blur_frame
 
     def apply_noise_effect(self):
         """Apply a noise effect to the selected frames based on user-defined intensity."""
@@ -1517,8 +1538,17 @@ class GIFEditor:
 
     def slide_transition_effect(self):
         """Apply a slide transition effect to the selected frames based on user input for direction and speed."""
+        # Check if there are frames with a checked box
+        checked_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+        if len(checked_indices) < 2:
+            messagebox.showinfo("Info", "Need at least two checked frames to apply slide transition effect.")
+            return
+
         # Prompt the user for the direction of the slide
-        direction = simpledialog.askstring("Slide Transition Effect", "Enter direction (right, top, left, bottom):").strip().lower()
+        direction = simpledialog.askstring("Slide Transition Effect", "Enter direction (right, top, left, bottom):")
+        if direction is None:
+            return  # User cancelled
+        direction = direction.strip().lower()
         if direction not in ["right", "top", "left", "bottom"]:
             messagebox.showerror("Invalid Input", "Please enter a valid direction: right, top, left, bottom.")
             return
@@ -1557,12 +1587,6 @@ class GIFEditor:
                 frames.append(new_frame)
             
             return frames
-
-        checked_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
-
-        if len(checked_indices) < 2:
-            messagebox.showinfo("Info", "Need at least two checked frames to apply slide transition effect.")
-            return
 
         for idx in range(len(checked_indices) - 1):
             i = checked_indices[idx]
@@ -1619,14 +1643,20 @@ class GIFEditor:
 
     def change_preview_resolution(self):
         """Change the preview resolution based on user input."""
+        MAX_WIDTH = 2560
+        MAX_HEIGHT = 1600
+
         resolution = simpledialog.askstring("Change Preview Resolution", "Enter new resolution (e.g., 800x600):")
         if resolution:
             try:
                 width, height = map(int, resolution.split('x'))
                 if width > 0 and height > 0:
-                    self.preview_width = width
-                    self.preview_height = height
-                    self.show_frame()  # Update the displayed frame with new resolution
+                    if width <= MAX_WIDTH and height <= MAX_HEIGHT:
+                        self.preview_width = width
+                        self.preview_height = height
+                        self.show_frame()  # Update the displayed frame with new resolution
+                    else:
+                        messagebox.showerror("Invalid Resolution", f"Resolution exceeds the maximum allowed size of {MAX_WIDTH}x{MAX_HEIGHT}.")
                 else:
                     messagebox.showerror("Invalid Resolution", "Width and height must be positive integers.")
             except ValueError:
