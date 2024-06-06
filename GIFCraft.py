@@ -124,7 +124,6 @@ class GIFEditor:
         effects_menu.add_command(label="Desaturate Frames", command=self.desaturate_frames)
         effects_menu.add_command(label="Invert Colors", command=self.invert_colors_of_selected_frames)
         effects_menu.add_command(label="Glitch Effect", command=self.apply_random_glitch_effect)
-        effects_menu.add_command(label="Crossfade Effect", command=self.crossfade_effect)
         effects_menu.add_command(label="Adjust Brightness and Contrast", command=self.prompt_and_apply_brightness_contrast)
         effects_menu.add_command(label="Adjust Hue, Saturation, and Lightness", command=self.adjust_hsl)
         effects_menu.add_command(label="Zoom Effect", command=self.apply_zoom_effect)
@@ -1751,7 +1750,6 @@ class GIFEditor:
             self.is_preview_mode = False
             return
 
-        # Ensure the first checked frame index exists
         if checked_indices[0] >= len(self.frames):
             messagebox.showerror("Error", "Checked frame index is out of range.")
             self.is_preview_mode = False
@@ -1760,7 +1758,6 @@ class GIFEditor:
         composite_frame = Image.new("RGBA", self.frames[0].size, (255, 255, 255, 0))
         transparency_factor = 0.5  # Adjust transparency factor as needed
 
-        # Iterate through the checked frames
         for idx, i in enumerate(checked_indices):
             if i >= len(self.frames):
                 continue  # Skip if index is out of range
@@ -1773,7 +1770,6 @@ class GIFEditor:
                 frame.putalpha(alpha)
             composite_frame = Image.alpha_composite(composite_frame, frame)
 
-        # Add 'T' indicator in the top right corner
         draw = ImageDraw.Draw(composite_frame)
         font_size = 20
         try:
@@ -1785,13 +1781,11 @@ class GIFEditor:
         text_color = (255, 0, 0, 255)  # Red color for visibility
         draw.text(text_position, text, font=font, fill=text_color)
 
-        # Display the composite image
         preview = self.resize_image(composite_frame, max_width=self.preview_width, max_height=self.preview_height)
         photo = ImageTk.PhotoImage(preview)
         self.image_label.config(image=photo)
         self.image_label.image = photo
 
-        # Bind all key events to exit preview mode
         self.master.bind_all("<Key>", self.exit_preview_mode)
 
     def exit_preview_mode(self, event=None):
