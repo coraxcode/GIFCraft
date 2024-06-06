@@ -124,6 +124,7 @@ class GIFEditor:
         effects_menu.add_command(label="Desaturate Frames", command=self.desaturate_frames)
         effects_menu.add_command(label="Invert Colors", command=self.invert_colors_of_selected_frames)
         effects_menu.add_command(label="Glitch Effect", command=self.apply_random_glitch_effect)
+        effects_menu.add_command(label="Sketch Effect", command=self.apply_sketch_effect)
         effects_menu.add_command(label="Adjust Brightness and Contrast", command=self.prompt_and_apply_brightness_contrast)
         effects_menu.add_command(label="Adjust Hue, Saturation, and Lightness", command=self.adjust_hsl)
         effects_menu.add_command(label="Zoom Effect", command=self.apply_zoom_effect)
@@ -1304,6 +1305,24 @@ class GIFEditor:
                 frame = self.frames[i]
                 glitched_frame = glitch_frame(frame.copy())
                 self.frames[i] = glitched_frame
+
+        self.update_frame_list()
+        self.show_frame()
+
+    def apply_sketch_effect(self):
+        """Apply a sketch effect to the selected frames."""
+        self.save_state()  # Save the state before making changes
+
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i].convert("L")  # Convert to grayscale
+                inverted_frame = ImageOps.invert(frame)  # Invert colors
+                blurred_frame = inverted_frame.filter(ImageFilter.GaussianBlur(10))  # Apply Gaussian blur
+                sketch_frame = Image.blend(frame, blurred_frame, 0.5).convert("RGBA")  # Blend the original and blurred frames
+                
+                # Enhance edges
+                edge_enhanced_frame = sketch_frame.filter(ImageFilter.EDGE_ENHANCE_MORE)
+                self.frames[i] = edge_enhanced_frame
 
         self.update_frame_list()
         self.show_frame()
