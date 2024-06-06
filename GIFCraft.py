@@ -2060,7 +2060,8 @@ class GIFEditor:
         self.image_display_frame = tk.Frame(self.control_frame)
         self.image_display_frame.grid(row=0, column=0, padx=20, pady=20, sticky='n')
 
-        self.image_label = tk.Label(self.image_display_frame)
+        # Add a border to the image_label
+        self.image_label = tk.Label(self.image_display_frame, bd=0, relief="flat")  # No border initially
         self.image_label.pack()
 
         self.dimension_label = tk.Label(self.image_display_frame, text="", font=("Arial", 8), fg="grey")
@@ -2203,7 +2204,7 @@ class GIFEditor:
             frame = self.frames[self.frame_index]
             preview = self.resize_image(frame, max_width=self.preview_width, max_height=self.preview_height)
             photo = ImageTk.PhotoImage(preview)
-            self.image_label.config(image=photo)
+            self.image_label.config(image=photo, bd=2, relief="solid")  # Add border when frames are available
             self.image_label.image = photo
             self.image_label.config(text='')  # Remove text when showing image
             self.delay_entry.delete(0, tk.END)
@@ -2212,7 +2213,7 @@ class GIFEditor:
             total_duration = sum(self.delays)
             self.total_duration_label.config(text=f"Total Duration: {total_duration} ms")  # Show total duration
         else:
-            self.image_label.config(image='', text="No frames to display")
+            self.image_label.config(image='', text="No frames to display", bd=0, relief="flat")  # Remove border when no frames
             self.image_label.image = None
             self.delay_entry.delete(0, tk.END)
             self.dimension_label.config(text="")  # Clear frame dimensions
