@@ -2169,17 +2169,17 @@ class GIFEditor:
 
         # Create and populate frame widgets
         for i, (frame, delay, var) in enumerate(zip(self.frames, self.delays, self.checkbox_vars)):
-            frame_container = Frame(self.frame_list)
+            frame_container = Frame(self.frame_list, bg='gray' if i == self.frame_index else self.frame_list.cget('bg'))
             frame_container.pack(fill=tk.X)
 
-            checkbox = Checkbutton(frame_container, variable=var)
+            checkbox = Checkbutton(frame_container, variable=var, bg=frame_container.cget('bg'))
             checkbox.pack(side=tk.LEFT)
 
             frame_label_text = f"Frame {i + 1}: {delay} ms"
             if i == self.frame_index:
                 frame_label_text = f"→ {frame_label_text}"
 
-            label = tk.Label(frame_container, text=frame_label_text)
+            label = tk.Label(frame_container, text=frame_label_text, bg=frame_container.cget('bg'))
             label.pack(side=tk.LEFT, fill=tk.X)
 
         # Update the scroll region
