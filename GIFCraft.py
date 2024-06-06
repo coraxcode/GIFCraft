@@ -1760,7 +1760,7 @@ class GIFEditor:
         except IOError:
             font = ImageFont.load_default()  # Fall back to default font if specified font is not available
         text = "T"
-        text_position = (composite_frame.width - font_size - 10, 10)
+        text_position = (composite_frame.width - font_size - 20, 10)
         text_color = (255, 0, 0, 255)  # Red color for visibility
         draw.text(text_position, text, font=font, fill=text_color)
 
@@ -1817,6 +1817,8 @@ class GIFEditor:
             self.master.bind("<Key-4>", self.prompt_brush_size)
             self.master.bind("<bracketleft>", self.decrease_brush_size)
             self.master.bind("<bracketright>", self.increase_brush_size)
+
+            self.show_frame_with_overlay()  # Show frame with 'D' overlay
             messagebox.showinfo("Draw Mode", "Entered Draw Mode")
         else:
             # Unbind events when exiting draw mode
@@ -1829,7 +1831,40 @@ class GIFEditor:
             self.master.unbind("<Key-4>")
             self.master.unbind("<bracketleft>")
             self.master.unbind("<bracketright>")
+
+            self.show_frame()  # Show frame without overlay
             messagebox.showinfo("Draw Mode", "Exited Draw Mode")
+
+    def show_frame_with_overlay(self):
+        """Display the current frame with 'D' overlay in the upper right corner."""
+        if self.frames:
+            if self.frame_index >= len(self.frames):
+                self.frame_index = len(self.frames) - 1  # Ensure the frame index is within bounds
+            frame = self.frames[self.frame_index]
+            preview = self.resize_image(frame, max_width=self.preview_width, max_height=self.preview_height)
+            
+            # Add 'D' overlay to the preview
+            draw = ImageDraw.Draw(preview)
+            text_position = (preview.width - 20, 10)
+            text_color = (255, 0, 0, 255)  # Red color for visibility
+            draw.text(text_position, "D", fill=text_color)
+            
+            photo = ImageTk.PhotoImage(preview)
+            self.image_label.config(image=photo)
+            self.image_label.image = photo
+            self.image_label.config(text='')  # Remove text when showing image
+            self.delay_entry.delete(0, tk.END)
+            self.delay_entry.insert(0, str(self.delays[self.frame_index]))
+            self.dimension_label.config(text=f"Size: {frame.width}x{frame.height}")  # Show frame dimensions
+            total_duration = sum(self.delays)
+            self.total_duration_label.config(text=f"Total Duration: {total_duration} ms")  # Show total duration
+        else:
+            self.image_label.config(image='', text="No frames to display")
+            self.image_label.image = None
+            self.delay_entry.delete(0, tk.END)
+            self.dimension_label.config(text="")  # Clear frame dimensions
+            self.total_duration_label.config(text="")  # Clear total duration
+        self.update_frame_list()  # Refresh the frame list to show the current frame indicator
 
     def set_tool_brush(self, event=None):
         """Set the drawing tool to brush and display an infobox."""
@@ -1901,16 +1936,19 @@ class GIFEditor:
                     draw.line([self.last_x, self.last_y, x, y], fill=(255, 255, 255, 0), width=self.brush_size)
                 self.frames[self.frame_index] = frame
                 self.last_x, self.last_y = x, y
-                self.show_frame()
+                self.show_frame_with_overlay()  # Ensure 'D' overlay remains after drawing
+
 
     def draw_brush(self, draw, x1, y1, x2, y2):
         """Draw a smooth, round brush stroke."""
+        # Increase the exponent to 0.9 for a smoother line with more steps
         distance = ((x2 - x1)**2 + (y2 - y1)**2)**0.9
         num_steps = int(distance / self.brush_size) + 1
         for i in range(num_steps):
             x = x1 + i * (x2 - x1) / num_steps
             y = y1 + i * (y2 - y1) / num_steps
             draw.ellipse([x - self.brush_size / 2, y - self.brush_size / 2, x + self.brush_size / 2, y + self.brush_size / 2], fill=self.brush_color, outline=self.brush_color)
+
 
     def scale_coordinates(self, x, y):
         """Scale the coordinates based on the current preview resolution."""
