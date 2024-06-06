@@ -899,16 +899,16 @@ class GIFEditor:
             angle = simpledialog.askfloat("Rotate Frames", "Enter the rotation angle in degrees:", parent=self.master)
             if angle is None:  # User canceled the dialog
                 return
-            
+
             self.save_state()  # Save the state before making changes
-            
+
             for i, frame in enumerate(self.frames):
                 if self.checkbox_vars[i].get() == 1:
                     self.frames[i] = frame.rotate(angle, expand=True)
-            
+
             self.update_frame_list()
             self.show_frame()
-        
+
         except ValueError:
             messagebox.showerror("Invalid Input", "Please enter a valid number for the rotation angle.")
 
@@ -950,18 +950,18 @@ class GIFEditor:
         self.update_frame_list()
     
     def mark_even_odd_frames(self):
-        self.save_state()  # Save the state before making changes
         """Mark the checkboxes of all even or odd frames based on user input."""
+        self.save_state()  # Save the state before making changes
         choice = simpledialog.askinteger("Select Frames", "Enter 1 to mark odd frames, 2 to mark even frames:")
-        
+
         if choice not in [1, 2]:
             messagebox.showerror("Invalid Input", "Please enter 1 for odd frames or 2 for even frames.")
             return
-        
+
         # Clear all checkboxes first
         for var in self.checkbox_vars:
             var.set(0)
-        
+
         # Mark even or odd frames based on user input
         for i, var in enumerate(self.checkbox_vars):
             if choice == 1 and i % 2 == 0:  # 1 for odd frames (0-based index)
