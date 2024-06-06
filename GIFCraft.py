@@ -104,6 +104,7 @@ class GIFEditor:
         edit_menu.add_command(label="Flip Selected Frames Vertical", command=self.flip_selected_frames_vertical)
         edit_menu.add_separator()
         edit_menu.add_command(label="Check/Uncheck All", command=self.toggle_check_all, accelerator="A")
+        edit_menu.add_command(label="Check Even or Odd Frames", command=self.mark_even_odd_frames) 
         edit_menu.add_separator()
         edit_menu.add_command(label="Crop Frames", command=self.crop_frames)
         edit_menu.add_command(label="Resize Frames", command=self.resize_frames_dialog)
@@ -948,6 +949,26 @@ class GIFEditor:
             var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
         
         self.update_frame_list()
+    
+    def mark_even_odd_frames(self):
+        self.save_state()  # Save the state before making changes
+        """Mark the checkboxes of all even or odd frames based on user input."""
+        choice = simpledialog.askinteger("Select Frames", "Enter 1 to mark odd frames, 2 to mark even frames:")
+        
+        if choice not in [1, 2]:
+            messagebox.showerror("Invalid Input", "Please enter 1 for odd frames or 2 for even frames.")
+            return
+        
+        # Clear all checkboxes first
+        for var in self.checkbox_vars:
+            var.set(0)
+        
+        # Mark even or odd frames based on user input
+        for i, var in enumerate(self.checkbox_vars):
+            if choice == 1 and i % 2 == 0:  # 1 for odd frames (0-based index)
+                var.set(1)
+            elif choice == 2 and i % 2 != 0:  # 2 for even frames (0-based index)
+                var.set(1)
 
     def crop_frames(self):
         """Crop the selected frames based on user input values for each side."""
