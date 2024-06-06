@@ -1814,6 +1814,7 @@ class GIFEditor:
             self.master.bind("<Key-1>", self.set_tool_brush)
             self.master.bind("<Key-2>", self.set_tool_eraser)
             self.master.bind("<Key-3>", self.set_tool_color)
+            self.master.bind("<Key-4>", self.prompt_brush_size)
             self.master.bind("<bracketleft>", self.decrease_brush_size)
             self.master.bind("<bracketright>", self.increase_brush_size)
             messagebox.showinfo("Draw Mode", "Entered Draw Mode")
@@ -1825,6 +1826,7 @@ class GIFEditor:
             self.master.unbind("<Key-1>")
             self.master.unbind("<Key-2>")
             self.master.unbind("<Key-3>")
+            self.master.unbind("<Key-4>")
             self.master.unbind("<bracketleft>")
             self.master.unbind("<bracketright>")
             messagebox.showinfo("Draw Mode", "Exited Draw Mode")
@@ -1843,6 +1845,13 @@ class GIFEditor:
         """Open color chooser, set brush color, and display an infobox."""
         self.choose_color()
         messagebox.showinfo("Tool Selected", "Selected Tool: Color")
+
+    def prompt_brush_size(self, event=None):
+        """Prompt the user to enter the brush size."""
+        size = simpledialog.askinteger("Brush Size", "Enter the brush size:", initialvalue=self.brush_size, minvalue=1)
+        if size:
+            self.brush_size = size
+            messagebox.showinfo("Brush Size", f"Brush size set to: {self.brush_size}")
 
     def decrease_brush_size(self, event=None):
         """Decrease the brush size and display the new size in an infobox."""
@@ -1887,12 +1896,21 @@ class GIFEditor:
                 frame = self.frames[self.frame_index].copy()
                 draw = ImageDraw.Draw(frame)
                 if self.tool == 'brush':
-                    draw.line([self.last_x, self.last_y, x, y], fill=self.brush_color, width=self.brush_size)
+                    self.draw_brush(draw, self.last_x, self.last_y, x, y)
                 elif self.tool == 'eraser':
                     draw.line([self.last_x, self.last_y, x, y], fill=(255, 255, 255, 0), width=self.brush_size)
                 self.frames[self.frame_index] = frame
                 self.last_x, self.last_y = x, y
                 self.show_frame()
+
+    def draw_brush(self, draw, x1, y1, x2, y2):
+        """Draw a smooth, round brush stroke."""
+        distance = ((x2 - x1)**2 + (y2 - y1)**2)**0.9
+        num_steps = int(distance / self.brush_size) + 1
+        for i in range(num_steps):
+            x = x1 + i * (x2 - x1) / num_steps
+            y = y1 + i * (y2 - y1) / num_steps
+            draw.ellipse([x - self.brush_size / 2, y - self.brush_size / 2, x + self.brush_size / 2, y + self.brush_size / 2], fill=self.brush_color, outline=self.brush_color)
 
     def scale_coordinates(self, x, y):
         """Scale the coordinates based on the current preview resolution."""
