@@ -123,6 +123,8 @@ class GIFEditor:
         effects_menu.add_command(label="Crossfade Effect", command=self.crossfade_effect)
         effects_menu.add_command(label="Reverse Frames", command=self.reverse_frames)
         effects_menu.add_command(label="Desaturate Frames", command=self.desaturate_frames)
+        effects_menu.add_command(label="Strange Sharpness Effect", command=self.apply_sharpening_effect)
+        effects_menu.add_command(label="Strange Sharpness Effect", command=self.apply_strange_sharpening_effect) 
         effects_menu.add_command(label="Invert Colors", command=self.invert_colors_of_selected_frames)
         effects_menu.add_command(label="Glitch Effect", command=self.apply_random_glitch_effect)
         effects_menu.add_command(label="Sketch Effect", command=self.apply_sketch_effect)
@@ -1210,6 +1212,58 @@ class GIFEditor:
         self.show_frame()
         self.update_frame_list()
 
+    def apply_sharpening_effect(self):
+        """Apply a sharpening effect to the selected frames with user-defined intensity."""
+        # Prompt the user for the sharpening intensity
+        sharpening_intensity = simpledialog.askfloat(
+            "Sharpening Effect", 
+            "Enter sharpening intensity (e.g., 9.0 for 900%):", 
+            minvalue=1.0
+        )
+        
+        if sharpening_intensity is None:
+            return  # User canceled the dialog
+
+        self.save_state()  # Save the state before making changes
+
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i]
+                # Apply the sharpening filter with the user-defined intensity
+                enhancer = ImageEnhance.Sharpness(frame)
+                self.frames[i] = enhancer.enhance(sharpening_intensity)
+        
+        self.update_frame_list()
+        self.show_frame()
+
+    
+    def apply_strange_sharpening_effect(self):
+        """Apply a specialized sharpening effect to the selected frames for ghost and UFO photo studies."""
+        self.save_state()  # Save the state before making changes
+
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i]
+                # Convert to grayscale to highlight edges more effectively
+                gray_frame = frame.convert("L")
+                
+                # Apply a strong edge enhancement filter
+                edge_enhanced = gray_frame.filter(ImageFilter.EDGE_ENHANCE_MORE)
+                
+                # Sharpen the image dramatically
+                sharpener = ImageEnhance.Sharpness(edge_enhanced)
+                sharpened_frame = sharpener.enhance(10.0)  # Increase sharpness significantly
+
+                # Optionally, enhance contrast to make features stand out more
+                contrast_enhancer = ImageEnhance.Contrast(sharpened_frame)
+                enhanced_frame = contrast_enhancer.enhance(2.0)  # Increase contrast
+
+                # Convert back to RGBA (if needed)
+                self.frames[i] = enhanced_frame.convert("RGBA")
+        
+        self.update_frame_list()
+        self.show_frame()
+        
     def invert_colors_of_selected_frames(self):
         """Invert colors of the selected frames."""
         if not any(var.get() for var in self.checkbox_vars):
