@@ -104,7 +104,8 @@ class GIFEditor:
         edit_menu.add_command(label="Flip Selected Frames Vertical", command=self.flip_selected_frames_vertical)
         edit_menu.add_separator()
         edit_menu.add_command(label="Check/Uncheck All", command=self.toggle_check_all, accelerator="A")
-        edit_menu.add_command(label="Check Even or Odd Frames", command=self.mark_even_odd_frames) 
+        edit_menu.add_command(label="Check Even or Odd Frames", command=self.mark_even_odd_frames)
+        edit_menu.add_command(label="Check Frames Relative to Cursor", command=self.mark_frames_relative_to_cursor)
         edit_menu.add_separator()
         edit_menu.add_command(label="Crop Frames", command=self.crop_frames)
         edit_menu.add_command(label="Resize Frames", command=self.resize_frames_dialog)
@@ -969,6 +970,23 @@ class GIFEditor:
                 var.set(1)
             elif choice == 2 and i % 2 != 0:  # 2 for even frames (0-based index)
                 var.set(1)
+
+    def mark_frames_relative_to_cursor(self):
+        """Mark all frames that are below or above the cursor in the frame list based on user input."""
+        direction = simpledialog.askstring("Mark Frames", "Enter 'up' to mark frames above or 'down' to mark frames below the current frame:")
+
+        if direction not in ["up", "down"]:
+            messagebox.showerror("Invalid Input", "Please enter 'up' or 'down'.")
+            return
+
+        if direction == "up":
+            for i in range(self.frame_index + 1):
+                self.checkbox_vars[i].set(1)
+        elif direction == "down":
+            for i in range(self.frame_index, len(self.checkbox_vars)):
+                self.checkbox_vars[i].set(1)
+
+        self.update_frame_list()
 
     def crop_frames(self):
         """Crop the selected frames based on user input values for each side."""
