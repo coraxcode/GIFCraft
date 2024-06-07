@@ -2251,7 +2251,7 @@ class GIFEditor:
         self.frame_list_frame = Frame(self.master)
         self.frame_list_frame.pack(side=tk.LEFT, fill=tk.Y)
 
-        self.scrollbar = Scrollbar(self.frame_list_frame)
+        self.scrollbar = Scrollbar(self.frame_list_frame, orient="vertical")
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.canvas = Canvas(self.frame_list_frame, yscrollcommand=self.scrollbar.set)
@@ -2260,6 +2260,11 @@ class GIFEditor:
 
         self.frame_list = Frame(self.canvas)
         self.canvas.create_window((0, 0), window=self.frame_list, anchor='nw')
+
+        # Ensure the frame list is properly resized and configured to update the scrollbar
+        self.frame_list.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+
+        self.update_frame_list()
 
     def setup_control_frame(self):
         """Set up the control frame with image display."""
