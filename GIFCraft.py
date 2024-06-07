@@ -106,6 +106,7 @@ class GIFEditor:
         edit_menu.add_command(label="Check/Uncheck All", command=self.toggle_check_all, accelerator="A")
         edit_menu.add_command(label="Check Even or Odd Frames", command=self.mark_even_odd_frames)
         edit_menu.add_command(label="Check Frames Relative to Cursor", command=self.mark_frames_relative_to_cursor)
+        edit_menu.add_command(label="Go to Frame", command=self.go_to_frame)
         edit_menu.add_separator()
         edit_menu.add_command(label="Crop Frames", command=self.crop_frames)
         edit_menu.add_command(label="Resize Frames", command=self.resize_frames_dialog)
@@ -123,7 +124,7 @@ class GIFEditor:
         effects_menu.add_command(label="Crossfade Effect", command=self.crossfade_effect)
         effects_menu.add_command(label="Reverse Frames", command=self.reverse_frames)
         effects_menu.add_command(label="Desaturate Frames", command=self.desaturate_frames)
-        effects_menu.add_command(label="Strange Sharpness Effect", command=self.apply_sharpening_effect)
+        effects_menu.add_command(label="Sharpness Effect", command=self.apply_sharpening_effect)
         effects_menu.add_command(label="Strange Sharpness Effect", command=self.apply_strange_sharpening_effect) 
         effects_menu.add_command(label="Invert Colors", command=self.invert_colors_of_selected_frames)
         effects_menu.add_command(label="Glitch Effect", command=self.apply_random_glitch_effect)
@@ -990,6 +991,19 @@ class GIFEditor:
                 self.checkbox_vars[i].set(1)
 
         self.update_frame_list()
+
+    def go_to_frame(self):
+        """Prompt the user to enter a frame number and go to that frame."""
+        if not self.frames:
+            messagebox.showerror("Error", "No frames available.")
+            return
+
+        frame_number = simpledialog.askinteger("Go to Frame", "Enter frame number:", minvalue=1, maxvalue=len(self.frames))
+
+        if frame_number is not None:
+            self.frame_index = frame_number - 1
+            self.show_frame()
+            self.focus_current_frame()
 
     def crop_frames(self):
         """Crop the selected frames based on user input values for each side."""
