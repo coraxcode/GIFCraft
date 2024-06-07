@@ -5,6 +5,9 @@ from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageSequence, ImageOps, I
 import os
 import random
 import platform
+import threading
+import time
+import cv2
 
 class GIFEditor:
     def __init__(self, master):
@@ -74,7 +77,8 @@ class GIFEditor:
         file_menu.add_command(label="Save As High Quality GIF", command=self.save_as_high_quality_gif)
         file_menu.add_command(label="Save As", command=self.save_as, accelerator="Ctrl+Shift+S")
         file_menu.add_separator()
-        file_menu.add_command(label="Extract Frames", command=self.extract_frames)
+        file_menu.add_command(label="Extract Video Frames", command=self.extract_video_frames)
+        file_menu.add_command(label="Extract Frames Gif", command=self.extract_frames_gif)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.master.quit)
         self.menu_bar.add_cascade(label="File", menu=file_menu)
@@ -248,7 +252,77 @@ class GIFEditor:
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save high-quality GIF: {e}")
 
-    def extract_frames(self):
+    def extract_video_frames(self):
+        """Extract frames from a video file and save them as images with progress tracking and cancel option."""
+        # Ask the user to select a video file
+        file_path = filedialog.askopenfilename(filetypes=[("Video files", "*.mp4 *.avi *.mkv")])
+        if not file_path:
+            return
+
+        # Ask the user to select a directory to save the frames
+        output_dir = filedialog.askdirectory()
+        if not output_dir:
+            return
+
+        def cancel_extraction():
+            nonlocal cancel
+            cancel = True
+
+        def extract_frames():
+            nonlocal cancel
+            start_time = time.time()
+
+            try:
+                cap = cv2.VideoCapture(file_path)
+                if not cap.isOpened():
+                    messagebox.showerror("Error", "Failed to open video file.")
+                    progress_window.destroy()
+                    return
+
+                frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                extracted_frames = 0
+                success, frame = cap.read()
+
+                while success and not cancel:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    image = Image.fromarray(frame)
+                    frame_path = os.path.join(output_dir, f"frame_{extracted_frames + 1}.png")
+                    image.save(frame_path)
+                    extracted_frames += 1
+
+                    progress_var.set((extracted_frames / frame_count) * 100)
+                    progress_window.update_idletasks()
+                    success, frame = cap.read()
+
+                cap.release()
+                end_time = time.time()
+                elapsed_time = end_time - start_time
+
+                if cancel:
+                    messagebox.showinfo("Cancelled", "Frame extraction cancelled.")
+                else:
+                    messagebox.showinfo("Success", f"Extracted {extracted_frames} frames in {elapsed_time:.2f} seconds!")
+
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to extract frames: {e}")
+            finally:
+                progress_window.destroy()
+
+        cancel = False
+
+        progress_window = tk.Toplevel(self.master)
+        progress_window.title("Extracting Frames")
+        progress_window.geometry("300x100")
+        progress_var = tk.DoubleVar()
+        progress_bar = ttk.Progressbar(progress_window, variable=progress_var, maximum=100)
+        progress_bar.pack(expand=True, fill=tk.BOTH, padx=20, pady=20)
+        cancel_button = tk.Button(progress_window, text="Cancel", command=cancel_extraction)
+        cancel_button.pack(pady=10)
+
+        extraction_thread = threading.Thread(target=extract_frames)
+        extraction_thread.start()
+
+    def extract_frames_gif(self):
         """Extract the frames and save them as individual images."""
         if not self.frames:
             messagebox.showerror("Error", "No frames to extract.")
@@ -2356,8 +2430,8 @@ class GIFEditor:
         self.master.bind("A", self.toggle_check_all)
         self.master.bind("t", self.toggle_transparent_frames_preview)
         self.master.bind("T", self.toggle_transparent_frames_preview)
-        self.master.bind("d", self.focus_delay_entry)
-        self.master.bind("D", self.focus_delay_entry)
+        self.master.bind("f", self.focus_delay_entry)
+        self.master.bind("F", self.focus_delay_entry)
 
     def toggle_checkbox(self, event=None):
         """Toggle the checkbox of the current frame."""
