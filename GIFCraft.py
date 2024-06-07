@@ -131,8 +131,9 @@ class GIFEditor:
         effects_menu.add_command(label="Adjust Brightness and Contrast", command=self.prompt_and_apply_brightness_contrast)
         effects_menu.add_command(label="Adjust Hue, Saturation, and Lightness", command=self.adjust_hsl)
         effects_menu.add_command(label="Zoom Effect", command=self.apply_zoom_effect)
+        effects_menu.add_command(label="Apply Zoom Effect Click", command=self.apply_zoom_effect_click)
         effects_menu.add_command(label="Blur Effect", command=self.apply_blur_effect)
-        effects_menu.add_command(label="Zoom and Speed Blur Effect", command=self.apply_zoom_and_speed_blur_effect)
+        effects_menu.add_command(label="Zoom and Speed Blur Effect", command=self.apply_zoom_and_speed_blur_effect) 
         effects_menu.add_command(label="Noise Effect", command=self.apply_noise_effect)
         effects_menu.add_command(label="Pixelate Effect", command=self.apply_pixelate_effect)
         effects_menu.add_command(label="Reduce Transparency", command=self.reduce_transparency_of_checked_frames)
@@ -1502,6 +1503,82 @@ class GIFEditor:
         # Update the frame list and show the current frame
         self.update_frame_list()
         self.show_frame()
+
+    def apply_zoom_effect_click(self):
+        """Apply a zoom effect to the selected frames."""
+        zoom_factor = simpledialog.askfloat("Zoom Effect", "Enter zoom factor (e.g., 2 for 200% zoom in, 0.5 for 50% zoom out):", minvalue=0.1)
+        if zoom_factor is None:
+            return
+
+        checked_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+        if not checked_indices:
+            messagebox.showinfo("Zoom Effect", "No frames selected for zooming.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        zoom_applied = False
+
+        def on_click(event, preview_width, preview_height):
+            nonlocal zoom_applied
+            """Zoom into or out of the image at the clicked position."""
+            for frame_index in checked_indices:
+                frame = self.frames[frame_index]
+                width, height = frame.size
+                click_x = event.x * (width / preview_width)
+                click_y = event.y * (height / preview_height)
+
+                new_width = int(width * zoom_factor)
+                new_height = int(height * zoom_factor)
+                zoomed_frame = frame.resize((new_width, new_height), Image.LANCZOS)
+
+                if zoom_factor > 1:
+                    left = max(0, min(int(click_x * zoom_factor - width // 2), new_width - width))
+                    top = max(0, min(int(click_y * zoom_factor - height // 2), new_height - height))
+                    right = left + width
+                    bottom = top + height
+                    self.frames[frame_index] = zoomed_frame.crop((left, top, right, bottom))
+                else:
+                    left = max(0, min(int(click_x - new_width // 2), width - new_width))
+                    top = max(0, min(int(click_y - new_height // 2), height - new_height))
+                    right = left + new_width
+                    bottom = top + new_height
+
+                    # Create a new image with the original size and paste the zoomed-out image onto it
+                    new_frame = Image.new("RGBA", (width, height))
+                    new_frame.paste(zoomed_frame, (left, top))
+                    self.frames[frame_index] = new_frame
+
+            zoom_applied = True
+            zoom_window.destroy()
+            self.update_frame_list()
+            self.show_frame()
+
+        # Create a new window to display the image
+        zoom_window = tk.Toplevel(self.master)
+        zoom_window.title("Click to Zoom")
+
+        zoom_canvas = tk.Canvas(zoom_window)
+        zoom_canvas.pack()
+
+        def display_preview(frame):
+            """Display the preview of the frame in the zoom window."""
+            preview = self.resize_image(frame, max_width=self.preview_width, max_height=self.preview_height)
+            preview_width, preview_height = preview.size
+            photo = ImageTk.PhotoImage(preview)
+            zoom_canvas.config(width=preview_width, height=preview_height)
+            zoom_canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+            zoom_canvas.image = photo  # Keep a reference to avoid garbage collection
+            zoom_canvas.bind("<Button-1>", lambda event: on_click(event, preview_width, preview_height))
+
+        display_preview(self.frames[checked_indices[0]])
+
+        def on_close():
+            zoom_window.destroy()
+
+        zoom_window.protocol("WM_DELETE_WINDOW", on_close)
+
+        zoom_window.mainloop()
 
     def apply_blur_effect(self):
         """Apply blur effect to selected frames with user-defined intensity."""
