@@ -125,7 +125,8 @@ class GIFEditor:
         effects_menu.add_command(label="Reverse Frames", command=self.reverse_frames)
         effects_menu.add_command(label="Desaturate Frames", command=self.desaturate_frames)
         effects_menu.add_command(label="Sharpness Effect", command=self.apply_sharpening_effect)
-        effects_menu.add_command(label="Strange Sharpness Effect", command=self.apply_strange_sharpening_effect) 
+        effects_menu.add_command(label="Strange Sharpness Effect", command=self.apply_strange_sharpening_effect)
+        effects_menu.add_command(label="Ghost Detection Effect", command=self.ghost_detection_effect) 
         effects_menu.add_command(label="Invert Colors", command=self.invert_colors_of_selected_frames)
         effects_menu.add_command(label="Glitch Effect", command=self.apply_random_glitch_effect)
         effects_menu.add_command(label="Sketch Effect", command=self.apply_sketch_effect)
@@ -1278,6 +1279,48 @@ class GIFEditor:
         
         self.update_frame_list()
         self.show_frame()
+
+    def ghost_detection_effect(self):
+        """Apply a ghost detection effect to the selected frames."""
+        from PIL import ImageEnhance, ImageOps, ImageFilter, ImageChops
+
+        # Function to enhance and apply a ghostly effect
+        def apply_ghost_effect(frame):
+            # Convert to grayscale
+            gray_frame = frame.convert("L")
+
+            # Enhance contrast using histogram equalization
+            equalized_frame = ImageOps.equalize(gray_frame)
+
+            # Apply Gaussian blur to reduce noise
+            blurred_frame = equalized_frame.filter(ImageFilter.GaussianBlur(2))
+
+            # Use adaptive thresholding to create a binary image
+            threshold_frame = blurred_frame.point(lambda p: p > 128 and 255)
+
+            # Apply edge detection (using Canny edge detector if possible)
+            edges = threshold_frame.filter(ImageFilter.FIND_EDGES)
+
+            # Enhance edges to make them more prominent
+            enhancer = ImageEnhance.Contrast(edges)
+            enhanced_edges = enhancer.enhance(2.0)
+
+            # Invert the image to create a ghostly effect
+            inverted_image = ImageOps.invert(enhanced_edges)
+
+            # Convert back to RGBA
+            ghost_frame = inverted_image.convert("RGBA")
+
+            # Blend the original frame with the ghost frame to create a more realistic apparition
+            blended_frame = Image.blend(frame.convert("RGBA"), ghost_frame, alpha=0.5)
+
+            return blended_frame
+
+        # Apply the ghost effect to selected frames
+        self.save_state()  # Save the state before making changes
+        for i in range(len(self.frames)):
+            if self.checkbox_vars[i].get() == 1:
+                self.frames[i] = apply_ghost_effect(self.frames[i])
         
     def invert_colors_of_selected_frames(self):
         """Invert colors of the selected frames."""
