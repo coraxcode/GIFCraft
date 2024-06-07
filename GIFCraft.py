@@ -2282,7 +2282,9 @@ class GIFEditor:
         self.master.bind("<Control-o>", self.load_file)
         self.master.bind("<Control-O>", self.load_file)
         self.master.bind("<Left>", self.previous_frame)
+        self.master.bind("<Control-Left>", self.go_to_beginning)
         self.master.bind("<Right>", self.next_frame)
+        self.master.bind("<Control-Right>", self.go_to_end)
         self.master.bind("<Up>", self.move_frame_up)
         self.master.bind("<Down>", self.move_frame_down)
         self.master.bind("<Delete>", self.delete_frames)
@@ -2315,17 +2317,31 @@ class GIFEditor:
             current_var = self.checkbox_vars[self.frame_index]
             current_var.set(0 if current_var.get() else 1)
 
+    def next_frame(self, event=None):
+        """Show the next frame without altering the scrollbar position."""
+        if self.frame_index < len(self.frames) - 1:
+            self.frame_index += 1
+            self.show_frame()
+
+    def go_to_end(self, event=None):
+        """Move the cursor to the end of the frame list."""
+        if self.frames:
+            self.frame_index = len(self.frames) - 1
+            self.show_frame()
+            self.focus_current_frame()
+
     def previous_frame(self, event=None):
         """Show the previous frame without altering the scrollbar position."""
         if self.frame_index > 0:
             self.frame_index -= 1
             self.show_frame()
 
-    def next_frame(self, event=None):
-        """Show the next frame without altering the scrollbar position."""
-        if self.frame_index < len(self.frames) - 1:
-            self.frame_index += 1
+    def go_to_beginning(self, event=None):
+        """Move the cursor to the beginning of the frame list."""
+        if self.frames:
+            self.frame_index = 0
             self.show_frame()
+            self.focus_current_frame()
 
     def resize_to_base_size(self, image):
         """Resize the image to the base size of the first frame and center it."""
