@@ -1395,6 +1395,9 @@ class GIFEditor:
         for i in range(len(self.frames)):
             if self.checkbox_vars[i].get() == 1:
                 self.frames[i] = apply_ghost_effect(self.frames[i])
+
+            self.show_frame()
+            self.update_frame_list()
         
     def invert_colors_of_selected_frames(self):
         """Invert colors of the selected frames."""
