@@ -62,6 +62,7 @@ class GIFEditor:
         self.menu_bar = Menu(self.master)
         self.create_file_menu()
         self.create_edit_menu()
+        self.create_frames_menu()
         self.create_effects_menu()
         self.create_animation_menu()
         self.create_help_menu()
@@ -86,19 +87,12 @@ class GIFEditor:
     def create_edit_menu(self):
         """Create the Edit menu."""
         edit_menu = Menu(self.menu_bar, tearoff=0)
-        edit_menu.add_command(label="Merge Selected Frames", command=self.merge_frames)
-        edit_menu.add_command(label="Add Image", command=self.add_image)
-        edit_menu.add_command(label="Add Text", command=self.add_text_frame)
-        edit_menu.add_command(label="Apply Frame 1", command=self.apply_frame_1_)
-        edit_menu.add_command(label="Add Overlay Frame", command=self.apply_overlay_frame)
-        edit_menu.add_command(label="Add Empty Frame", command=self.add_empty_frame)
-        edit_menu.add_command(label="Delete Frame(s)", command=self.delete_frames, accelerator="Del")
-        edit_menu.add_command(label="Delete Unchecked Frame(s)", command=self.delete_unchecked_frames, accelerator="Ctrl+Del") 
+        edit_menu.add_command(label="Undo", command=self.undo, accelerator="Ctrl+Z")
+        edit_menu.add_command(label="Redo", command=self.redo, accelerator="Ctrl+Y")
         edit_menu.add_separator()
-        edit_menu.add_command(label="Move Selected Frames", command=self.prompt_and_move_selected_frames)
-        edit_menu.add_command(label="Move Frame Up", command=self.move_frame_up, accelerator="Arrow Up")
-        edit_menu.add_command(label="Move Frame Down", command=self.move_frame_down, accelerator="Arrow Down")
-        edit_menu.add_separator()        
+        edit_menu.add_command(label="Copy", command=self.copy_frames, accelerator="Ctrl+C")
+        edit_menu.add_command(label="Paste", command=self.paste_frames, accelerator="Ctrl+V")
+        edit_menu.add_separator()
         edit_menu.add_command(label="Rotate Selected Frames 180º", command=self.rotate_selected_frames_180)
         edit_menu.add_command(label="Rotate Selected Frames 90º CW", command=self.rotate_selected_frames_90_cw)
         edit_menu.add_command(label="Rotate Selected Frames 90º CCW", command=self.rotate_selected_frames_90_ccw)
@@ -106,20 +100,6 @@ class GIFEditor:
         edit_menu.add_separator()
         edit_menu.add_command(label="Flip Selected Frames Horizontal", command=self.flip_selected_frames_horizontal)
         edit_menu.add_command(label="Flip Selected Frames Vertical", command=self.flip_selected_frames_vertical)
-        edit_menu.add_separator()
-        edit_menu.add_command(label="Check/Uncheck All", command=self.toggle_check_all, accelerator="A")
-        edit_menu.add_command(label="Check Even or Odd Frames", command=self.mark_even_odd_frames)
-        edit_menu.add_command(label="Check Frames Relative to Cursor", command=self.mark_frames_relative_to_cursor)
-        edit_menu.add_command(label="Go to Frame", command=self.go_to_frame)
-        edit_menu.add_separator()
-        edit_menu.add_command(label="Crop Frames", command=self.crop_frames)
-        edit_menu.add_command(label="Resize Frames", command=self.resize_frames_dialog)
-        edit_menu.add_separator()
-        edit_menu.add_command(label="Copy", command=self.copy_frames, accelerator="Ctrl+C")
-        edit_menu.add_command(label="Paste", command=self.paste_frames, accelerator="Ctrl+V")
-        edit_menu.add_separator()
-        edit_menu.add_command(label="Undo", command=self.undo, accelerator="Ctrl+Z")
-        edit_menu.add_command(label="Redo", command=self.redo, accelerator="Ctrl+Y")
         self.menu_bar.add_cascade(label="Edit", menu=edit_menu)
 
     def create_effects_menu(self):
@@ -145,6 +125,38 @@ class GIFEditor:
         effects_menu.add_command(label="Reduce Transparency", command=self.reduce_transparency_of_checked_frames)
         effects_menu.add_command(label="Slide Transition Effect", command=self.slide_transition_effect)
         self.menu_bar.add_cascade(label="Effects", menu=effects_menu)
+
+    def create_frames_menu(self):
+        """Create the frames menu."""
+        frames_menu = Menu(self.menu_bar, tearoff=0)
+        frames_menu.add_command(label="Next frame", command=self.next_frame, accelerator="Arrow Right")
+        frames_menu.add_command(label="Previous frame", command=self.previous_frame, accelerator="Arrow Left")
+        frames_menu.add_separator() 
+        frames_menu.add_command(label="Go to Beginning", command=self.go_to_beginning, accelerator="Ctrl+Arrow Right")
+        frames_menu.add_command(label="Go to end", command=self.go_to_end, accelerator="Ctrl+Arrow Left")
+        frames_menu.add_separator() 
+        frames_menu.add_command(label="Move Frame Up", command=self.move_frame_up, accelerator="Arrow Up")
+        frames_menu.add_command(label="Move Frame Down", command=self.move_frame_down, accelerator="Arrow Down")
+        frames_menu.add_command(label="Move Selected Frames", command=self.prompt_and_move_selected_frames)
+        frames_menu.add_separator()   
+        frames_menu.add_command(label="Merge Selected Frames", command=self.merge_frames)
+        frames_menu.add_separator()
+        frames_menu.add_command(label="Add Image", command=self.add_image)
+        frames_menu.add_command(label="Add Text", command=self.add_text_frame)
+        frames_menu.add_command(label="Apply Frame 1", command=self.apply_frame_1_)
+        frames_menu.add_command(label="Add Overlay Frame", command=self.apply_overlay_frame)
+        frames_menu.add_command(label="Add Empty Frame", command=self.add_empty_frame)
+        frames_menu.add_command(label="Delete Frame(s)", command=self.delete_frames, accelerator="Del")
+        frames_menu.add_command(label="Delete Unchecked Frame(s)", command=self.delete_unchecked_frames, accelerator="Ctrl+Del")
+        frames_menu.add_separator()
+        frames_menu.add_command(label="Check/Uncheck All", command=self.toggle_check_all, accelerator="A")
+        frames_menu.add_command(label="Check Even or Odd Frames", command=self.mark_even_odd_frames)
+        frames_menu.add_command(label="Check Frames Relative to Cursor", command=self.mark_frames_relative_to_cursor)
+        frames_menu.add_command(label="Go to Frame", command=self.go_to_frame)
+        frames_menu.add_separator()
+        frames_menu.add_command(label="Crop Frames", command=self.crop_frames)
+        frames_menu.add_command(label="Resize Frames", command=self.resize_frames_dialog)
+        self.menu_bar.add_cascade(label="Frames", menu=frames_menu)
 
     def create_animation_menu(self):
         """Create the Animation menu."""
@@ -947,6 +959,72 @@ class GIFEditor:
         self.update_frame_list()
         self.show_frame()
 
+    def undo(self, event=None):
+        """Undo the last action."""
+        if self.history:
+            self.redo_stack.append((self.frames.copy(), self.delays.copy(), [var.get() for var in self.checkbox_vars], self.frame_index, self.current_file))
+            self.frames, self.delays, checkbox_states, self.frame_index, self.current_file = self.history.pop()
+            self.checkbox_vars = [IntVar(value=state) for state in checkbox_states]
+            for i, var in enumerate(self.checkbox_vars):
+                var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
+            self.base_size = self.frames[0].size if self.frames else None  # Reset base size based on the remaining frames
+            self.update_frame_list()
+            self.show_frame()
+            self.update_title()
+            self.check_all.set(False)  # Reset the check_all variable to ensure consistency
+
+    def redo(self, event=None):
+        """Redo the last undone action."""
+        if self.redo_stack:
+            self.history.append((self.frames.copy(), self.delays.copy(), [var.get() for var in self.checkbox_vars], self.frame_index, self.current_file))
+            self.frames, self.delays, checkbox_states, self.frame_index, self.current_file = self.redo_stack.pop()
+            self.checkbox_vars = [IntVar(value=state) for state in checkbox_states]
+            for i, var in enumerate(self.checkbox_vars):
+                var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
+            self.update_frame_list()
+            self.show_frame()
+            self.update_title()
+            self.check_all.set(False)  # Reset the check_all variable to ensure consistency
+
+    def copy_frames(self, event=None):
+        """Copy the selected frames to the clipboard."""
+        self.copied_frames = [(self.frames[i].copy(), self.delays[i]) for i in range(len(self.checkbox_vars)) if self.checkbox_vars[i].get() == 1]
+        if not self.copied_frames:
+            messagebox.showinfo("Info", "No frames selected to copy.")
+        else:
+            messagebox.showinfo("Info", f"Copied {len(self.copied_frames)} frame(s).")
+
+    def paste_frames(self, event=None):
+        """Paste the copied frames below the selected frames with all checkboxes checked."""
+        # Check if there are any frames copied
+        if not hasattr(self, 'copied_frames') or not self.copied_frames:
+            messagebox.showerror("Error", "No frames to paste. Please copy frames first.")
+            return
+
+        # Get the selected indices
+        selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+        if not selected_indices:
+            messagebox.showinfo("Info", "No frames selected to paste after. Pasting at the end.")
+            insert_index = len(self.frames)
+        else:
+            insert_index = max(selected_indices) + 1
+
+        # Save the current state for undo functionality
+        self.save_state()
+
+        # Insert the copied frames and delays at the specified index
+        for frame, delay in self.copied_frames:
+            self.frames.insert(insert_index, frame)
+            self.delays.insert(insert_index, delay)
+            var = IntVar(value=1)  # Set the checkbox to be checked by default
+            var.trace_add('write', lambda *args, i=insert_index: self.set_current_frame(i))
+            self.checkbox_vars.insert(insert_index, var)
+            insert_index += 1
+
+        # Update the frame list and display the current frame
+        self.update_frame_list()
+        self.show_frame()
+
     def rotate_selected_frames_180(self):
         """Rotate the selected frames 180 degrees."""
         self.save_state()  # Save the state before making changes
@@ -1142,72 +1220,6 @@ class GIFEditor:
                 self.frames[i] = frame.resize((new_width, new_height), Image.LANCZOS)
         self.update_frame_list()
         self.show_frame()
-
-    def copy_frames(self, event=None):
-        """Copy the selected frames to the clipboard."""
-        self.copied_frames = [(self.frames[i].copy(), self.delays[i]) for i in range(len(self.checkbox_vars)) if self.checkbox_vars[i].get() == 1]
-        if not self.copied_frames:
-            messagebox.showinfo("Info", "No frames selected to copy.")
-        else:
-            messagebox.showinfo("Info", f"Copied {len(self.copied_frames)} frame(s).")
-
-    def paste_frames(self, event=None):
-        """Paste the copied frames below the selected frames with all checkboxes checked."""
-        # Check if there are any frames copied
-        if not hasattr(self, 'copied_frames') or not self.copied_frames:
-            messagebox.showerror("Error", "No frames to paste. Please copy frames first.")
-            return
-
-        # Get the selected indices
-        selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
-        if not selected_indices:
-            messagebox.showinfo("Info", "No frames selected to paste after. Pasting at the end.")
-            insert_index = len(self.frames)
-        else:
-            insert_index = max(selected_indices) + 1
-
-        # Save the current state for undo functionality
-        self.save_state()
-
-        # Insert the copied frames and delays at the specified index
-        for frame, delay in self.copied_frames:
-            self.frames.insert(insert_index, frame)
-            self.delays.insert(insert_index, delay)
-            var = IntVar(value=1)  # Set the checkbox to be checked by default
-            var.trace_add('write', lambda *args, i=insert_index: self.set_current_frame(i))
-            self.checkbox_vars.insert(insert_index, var)
-            insert_index += 1
-
-        # Update the frame list and display the current frame
-        self.update_frame_list()
-        self.show_frame()
-
-    def undo(self, event=None):
-        """Undo the last action."""
-        if self.history:
-            self.redo_stack.append((self.frames.copy(), self.delays.copy(), [var.get() for var in self.checkbox_vars], self.frame_index, self.current_file))
-            self.frames, self.delays, checkbox_states, self.frame_index, self.current_file = self.history.pop()
-            self.checkbox_vars = [IntVar(value=state) for state in checkbox_states]
-            for i, var in enumerate(self.checkbox_vars):
-                var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
-            self.base_size = self.frames[0].size if self.frames else None  # Reset base size based on the remaining frames
-            self.update_frame_list()
-            self.show_frame()
-            self.update_title()
-            self.check_all.set(False)  # Reset the check_all variable to ensure consistency
-
-    def redo(self, event=None):
-        """Redo the last undone action."""
-        if self.redo_stack:
-            self.history.append((self.frames.copy(), self.delays.copy(), [var.get() for var in self.checkbox_vars], self.frame_index, self.current_file))
-            self.frames, self.delays, checkbox_states, self.frame_index, self.current_file = self.redo_stack.pop()
-            self.checkbox_vars = [IntVar(value=state) for state in checkbox_states]
-            for i, var in enumerate(self.checkbox_vars):
-                var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
-            self.update_frame_list()
-            self.show_frame()
-            self.update_title()
-            self.check_all.set(False)  # Reset the check_all variable to ensure consistency
 
     def crossfade_effect(self):
         """Apply crossfade effect between checked frames with user-defined transition frames."""
