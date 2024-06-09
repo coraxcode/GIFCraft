@@ -102,31 +102,6 @@ class GIFEditor:
         edit_menu.add_command(label="Flip Selected Frames Vertical", command=self.flip_selected_frames_vertical)
         self.menu_bar.add_cascade(label="Edit", menu=edit_menu)
 
-    def create_effects_menu(self):
-        """Create the Effects menu."""
-        effects_menu = Menu(self.menu_bar, tearoff=0)
-        effects_menu.add_command(label="Crossfade Effect", command=self.crossfade_effect)
-        effects_menu.add_command(label="Reverse Frames", command=self.reverse_frames)
-        effects_menu.add_command(label="Desaturate Frames", command=self.desaturate_frames)
-        effects_menu.add_command(label="Sharpness Effect", command=self.apply_sharpening_effect)
-        effects_menu.add_command(label="Strange Sharpness Effect", command=self.apply_strange_sharpening_effect)
-        effects_menu.add_command(label="Ghost Detection Effect", command=self.ghost_detection_effect)
-        effects_menu.add_command(label="Anaglyph Effect (3D)", command=self.apply_anaglyph_effect)
-        effects_menu.add_command(label="Invert Colors", command=self.invert_colors_of_selected_frames)
-        effects_menu.add_command(label="Glitch Effect", command=self.apply_random_glitch_effect)
-        effects_menu.add_command(label="Sketch Effect", command=self.apply_sketch_effect)
-        effects_menu.add_command(label="Adjust Brightness and Contrast", command=self.prompt_and_apply_brightness_contrast)
-        effects_menu.add_command(label="Adjust Hue, Saturation, and Lightness", command=self.adjust_hsl)
-        effects_menu.add_command(label="Zoom Effect", command=self.apply_zoom_effect)
-        effects_menu.add_command(label="Apply Zoom Effect Click", command=self.apply_zoom_effect_click)
-        effects_menu.add_command(label="Blur Effect", command=self.apply_blur_effect)
-        effects_menu.add_command(label="Zoom and Speed Blur Effect", command=self.apply_zoom_and_speed_blur_effect) 
-        effects_menu.add_command(label="Noise Effect", command=self.apply_noise_effect)
-        effects_menu.add_command(label="Pixelate Effect", command=self.apply_pixelate_effect)
-        effects_menu.add_command(label="Reduce Transparency", command=self.reduce_transparency_of_checked_frames)
-        effects_menu.add_command(label="Slide Transition Effect", command=self.slide_transition_effect)
-        self.menu_bar.add_cascade(label="Effects", menu=effects_menu)
-
     def create_frames_menu(self):
         """Create the frames menu."""
         frames_menu = Menu(self.menu_bar, tearoff=0)
@@ -159,6 +134,31 @@ class GIFEditor:
         frames_menu.add_command(label="Resize Frames", command=self.resize_frames_dialog)
         self.menu_bar.add_cascade(label="Frames", menu=frames_menu)
 
+    def create_effects_menu(self):
+        """Create the Effects menu."""
+        effects_menu = Menu(self.menu_bar, tearoff=0)
+        effects_menu.add_command(label="Crossfade Effect", command=self.crossfade_effect)
+        effects_menu.add_command(label="Reverse Frames", command=self.reverse_frames)
+        effects_menu.add_command(label="Desaturate Frames", command=self.desaturate_frames)
+        effects_menu.add_command(label="Sharpness Effect", command=self.apply_sharpening_effect)
+        effects_menu.add_command(label="Strange Sharpness Effect", command=self.apply_strange_sharpening_effect)
+        effects_menu.add_command(label="Ghost Detection Effect", command=self.ghost_detection_effect)
+        effects_menu.add_command(label="Anaglyph Effect (3D)", command=self.apply_anaglyph_effect)
+        effects_menu.add_command(label="Invert Colors", command=self.invert_colors_of_selected_frames)
+        effects_menu.add_command(label="Glitch Effect", command=self.apply_random_glitch_effect)
+        effects_menu.add_command(label="Sketch Effect", command=self.apply_sketch_effect)
+        effects_menu.add_command(label="Adjust Brightness and Contrast", command=self.prompt_and_apply_brightness_contrast)
+        effects_menu.add_command(label="Adjust Hue, Saturation, and Lightness", command=self.adjust_hsl)
+        effects_menu.add_command(label="Zoom Effect", command=self.apply_zoom_effect)
+        effects_menu.add_command(label="Apply Zoom Effect Click", command=self.apply_zoom_effect_click)
+        effects_menu.add_command(label="Blur Effect", command=self.apply_blur_effect)
+        effects_menu.add_command(label="Zoom and Speed Blur Effect", command=self.apply_zoom_and_speed_blur_effect) 
+        effects_menu.add_command(label="Noise Effect", command=self.apply_noise_effect)
+        effects_menu.add_command(label="Pixelate Effect", command=self.apply_pixelate_effect)
+        effects_menu.add_command(label="Reduce Transparency", command=self.reduce_transparency_of_checked_frames)
+        effects_menu.add_command(label="Slide Transition Effect", command=self.slide_transition_effect)
+        self.menu_bar.add_cascade(label="Effects", menu=effects_menu)
+
     def create_animation_menu(self):
         """Create the Animation menu."""
         animation_menu = Menu(self.menu_bar, tearoff=0)
@@ -173,6 +173,8 @@ class GIFEditor:
         help_menu = Menu(self.menu_bar, tearoff=0)
         help_menu.add_command(label="About", command=self.show_about)
         self.menu_bar.add_cascade(label="Help", menu=help_menu)
+
+# MENU FILE
 
     def new_file(self, event=None):
         """Create a new file, prompting to save unsaved changes if any."""
@@ -373,6 +375,284 @@ class GIFEditor:
                 messagebox.showinfo("Success", f"{ext.upper()} saved successfully!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save {ext.upper()}: {e}")
+
+# MENU EDIT
+
+    def undo(self, event=None):
+        """Undo the last action."""
+        if self.history:
+            self.redo_stack.append((self.frames.copy(), self.delays.copy(), [var.get() for var in self.checkbox_vars], self.frame_index, self.current_file))
+            self.frames, self.delays, checkbox_states, self.frame_index, self.current_file = self.history.pop()
+            self.checkbox_vars = [IntVar(value=state) for state in checkbox_states]
+            for i, var in enumerate(self.checkbox_vars):
+                var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
+            self.base_size = self.frames[0].size if self.frames else None  # Reset base size based on the remaining frames
+            self.update_frame_list()
+            self.show_frame()
+            self.update_title()
+            self.check_all.set(False)  # Reset the check_all variable to ensure consistency
+
+    def redo(self, event=None):
+        """Redo the last undone action."""
+        if self.redo_stack:
+            self.history.append((self.frames.copy(), self.delays.copy(), [var.get() for var in self.checkbox_vars], self.frame_index, self.current_file))
+            self.frames, self.delays, checkbox_states, self.frame_index, self.current_file = self.redo_stack.pop()
+            self.checkbox_vars = [IntVar(value=state) for state in checkbox_states]
+            for i, var in enumerate(self.checkbox_vars):
+                var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
+            self.update_frame_list()
+            self.show_frame()
+            self.update_title()
+            self.check_all.set(False)  # Reset the check_all variable to ensure consistency
+
+    def copy_frames(self, event=None):
+        """Copy the selected frames to the clipboard."""
+        self.copied_frames = [(self.frames[i].copy(), self.delays[i]) for i in range(len(self.checkbox_vars)) if self.checkbox_vars[i].get() == 1]
+        if not self.copied_frames:
+            messagebox.showinfo("Info", "No frames selected to copy.")
+        else:
+            messagebox.showinfo("Info", f"Copied {len(self.copied_frames)} frame(s).")
+
+    def paste_frames(self, event=None):
+        """Paste the copied frames below the selected frames with all checkboxes checked."""
+        # Check if there are any frames copied
+        if not hasattr(self, 'copied_frames') or not self.copied_frames:
+            messagebox.showerror("Error", "No frames to paste. Please copy frames first.")
+            return
+
+        # Get the selected indices
+        selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+        if not selected_indices:
+            messagebox.showinfo("Info", "No frames selected to paste after. Pasting at the end.")
+            insert_index = len(self.frames)
+        else:
+            insert_index = max(selected_indices) + 1
+
+        # Save the current state for undo functionality
+        self.save_state()
+
+        # Insert the copied frames and delays at the specified index
+        for frame, delay in self.copied_frames:
+            self.frames.insert(insert_index, frame)
+            self.delays.insert(insert_index, delay)
+            var = IntVar(value=1)  # Set the checkbox to be checked by default
+            var.trace_add('write', lambda *args, i=insert_index: self.set_current_frame(i))
+            self.checkbox_vars.insert(insert_index, var)
+            insert_index += 1
+
+        # Update the frame list and display the current frame
+        self.update_frame_list()
+        self.show_frame()
+
+    def rotate_selected_frames_180(self):
+        """Rotate the selected frames 180 degrees."""
+        self.save_state()  # Save the state before making changes
+        for i, frame in enumerate(self.frames):
+            if self.checkbox_vars[i].get() == 1:
+                self.frames[i] = frame.rotate(180)
+        self.update_frame_list()
+        self.show_frame()
+    
+    def rotate_selected_frames_90_cw(self):
+        """Rotate the selected frames 90 degrees clockwise."""
+        self.save_state()  # Save the state before making changes
+        for i, frame in enumerate(self.frames):
+            if self.checkbox_vars[i].get() == 1:
+                self.frames[i] = frame.rotate(-90, expand=True)
+        self.update_frame_list()
+        self.show_frame()
+
+    def rotate_selected_frames_90_ccw(self):
+        """Rotate the selected frames 90 degrees counterclockwise."""
+        self.save_state()  # Save the state before making changes
+        for i, frame in enumerate(self.frames):
+            if self.checkbox_vars[i].get() == 1:
+                self.frames[i] = frame.rotate(90, expand=True)
+        self.update_frame_list()
+        self.show_frame()
+
+    def rotate_selected_frames(self):
+        """Rotate the selected frames by a user-specified number of degrees."""
+        try:
+            angle = simpledialog.askfloat("Rotate Frames", "Enter the rotation angle in degrees:", parent=self.master)
+            if angle is None:  # User canceled the dialog
+                return
+
+            self.save_state()  # Save the state before making changes
+
+            for i, frame in enumerate(self.frames):
+                if self.checkbox_vars[i].get() == 1:
+                    self.frames[i] = frame.rotate(angle, expand=True)
+
+            self.update_frame_list()
+            self.show_frame()
+
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Please enter a valid number for the rotation angle.")
+
+    def flip_selected_frames_horizontal(self):
+        """Flip the selected frames horizontally."""
+        self.save_state()  # Save the state before making changes
+        for i, frame in enumerate(self.frames):
+            if self.checkbox_vars[i].get() == 1:
+                self.frames[i] = frame.transpose(Image.FLIP_LEFT_RIGHT)
+        self.update_frame_list()
+        self.show_frame()
+
+    def flip_selected_frames_vertical(self):
+        """Flip the selected frames vertically."""
+        self.save_state()  # Save the state before making changes
+        for i, frame in enumerate(self.frames):
+            if self.checkbox_vars[i].get() == 1:
+                self.frames[i] = frame.transpose(Image.FLIP_TOP_BOTTOM)
+        self.update_frame_list()
+        self.show_frame()
+
+# MENU FRAMES
+
+    def next_frame(self, event=None):
+        """Show the next frame without altering the scrollbar position."""
+        if self.frame_index < len(self.frames) - 1:
+            self.frame_index += 1
+            self.show_frame()
+
+    def previous_frame(self, event=None):
+        """Show the previous frame without altering the scrollbar position."""
+        if self.frame_index > 0:
+            self.frame_index -= 1
+            self.show_frame()
+
+    def go_to_beginning(self, event=None):
+        """Move the cursor to the beginning of the frame list."""
+        if self.frames:
+            self.frame_index = 0
+            self.show_frame()
+            self.focus_current_frame()
+
+    def go_to_end(self, event=None):
+        """Move the cursor to the end of the frame list."""
+        if self.frames:
+            self.frame_index = len(self.frames) - 1
+            self.show_frame()
+            self.focus_current_frame()
+
+    def move_frame_up(self, event=None):
+        """Move the selected frame up in the list."""
+        selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+
+        if len(selected_indices) != 1:
+            messagebox.showwarning("Selection Error", "Please select exactly one frame to move.")
+            return
+
+        selected_index = selected_indices[0]
+
+        if selected_index == 0:
+            messagebox.showinfo("Move Up", "The selected frame is already at the top.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        # Swap the frames and delays
+        self.frames[selected_index], self.frames[selected_index - 1] = self.frames[selected_index - 1], self.frames[selected_index]
+        self.delays[selected_index], self.delays[selected_index - 1] = self.delays[selected_index - 1], self.delays[selected_index]
+
+        # Move the check state
+        self.checkbox_vars[selected_index].set(0)
+        self.checkbox_vars[selected_index - 1].set(1)
+
+        # Update the frame index to the new position of the moved frame
+        self.frame_index = selected_index - 1
+
+        self.update_frame_list()
+        self.show_frame()
+
+    def move_frame_down(self, event=None):
+        """Move the selected frame down in the list."""
+        selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+
+        if len(selected_indices) != 1:
+            messagebox.showwarning("Selection Error", "Please select exactly one frame to move.")
+            return
+
+        selected_index = selected_indices[0]
+
+        if selected_index == len(self.frames) - 1:
+            messagebox.showinfo("Move Down", "The selected frame is already at the bottom.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        # Swap the frames and delays
+        self.frames[selected_index], self.frames[selected_index + 1] = self.frames[selected_index + 1], self.frames[selected_index]
+        self.delays[selected_index], self.delays[selected_index + 1] = self.delays[selected_index + 1], self.delays[selected_index]
+
+        # Move the check state
+        self.checkbox_vars[selected_index].set(0)
+        self.checkbox_vars[selected_index + 1].set(1)
+
+        # Update the frame index to the new position of the moved frame
+        self.frame_index = selected_index + 1
+
+        self.update_frame_list()
+        self.show_frame()
+
+    def prompt_and_move_selected_frames(self):
+        """Prompt the user for the target position and move the selected frames."""
+        if not self.frames:
+            messagebox.showerror("Error", "No frames available to move.")
+            return
+
+        target_position = simpledialog.askinteger("Move Frames", "Enter the target position (0-based index):",
+                                                  minvalue=0, maxvalue=len(self.frames) - 1)
+        if target_position is not None:
+            self.move_selected_frames(target_position)
+
+    def move_selected_frames(self, target_position):
+        """
+        Move selected frames to a specific target position.
+
+        Parameters:
+        - target_position (int): The position where the selected frames should be moved.
+
+        This function moves all the frames with checkboxes checked to the specified target position in a safe and consistent manner.
+        """
+        if not self.frames:
+            messagebox.showerror("Error", "No frames available to move.")
+            return
+
+        if target_position < 0 or target_position >= len(self.frames):
+            messagebox.showerror("Error", "Invalid target position.")
+            return
+
+        selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+
+        if not selected_indices:
+            messagebox.showinfo("Info", "No frames selected to move.")
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        # Get the selected frames and their delays
+        selected_frames = [self.frames[i] for i in selected_indices]
+        selected_delays = [self.delays[i] for i in selected_indices]
+
+        # Remove selected frames from their original positions
+        for index in reversed(selected_indices):
+            del self.frames[index]
+            del self.delays[index]
+            del self.checkbox_vars[index]
+
+        # Insert selected frames at the target position
+        for i, (frame, delay) in enumerate(zip(selected_frames, selected_delays)):
+            insert_position = target_position + i
+            self.frames.insert(insert_position, frame)
+            self.delays.insert(insert_position, delay)
+            var = IntVar(value=1)  # Check the checkbox for the moved frames
+            var.trace_add('write', lambda *args, i=insert_position: self.set_current_frame(i))
+            self.checkbox_vars.insert(insert_position, var)
+
+        self.update_frame_list()
+        self.show_frame()
 
     def merge_frames(self):
         """Merge the checked frames from top to bottom respecting transparency."""
@@ -842,254 +1122,6 @@ class GIFEditor:
         self.update_frame_list()
         self.show_frame()  # Update the frame display
 
-    def prompt_and_move_selected_frames(self):
-        """Prompt the user for the target position and move the selected frames."""
-        if not self.frames:
-            messagebox.showerror("Error", "No frames available to move.")
-            return
-
-        target_position = simpledialog.askinteger("Move Frames", "Enter the target position (0-based index):",
-                                                  minvalue=0, maxvalue=len(self.frames) - 1)
-        if target_position is not None:
-            self.move_selected_frames(target_position)
-
-    def move_selected_frames(self, target_position):
-        """
-        Move selected frames to a specific target position.
-
-        Parameters:
-        - target_position (int): The position where the selected frames should be moved.
-
-        This function moves all the frames with checkboxes checked to the specified target position in a safe and consistent manner.
-        """
-        if not self.frames:
-            messagebox.showerror("Error", "No frames available to move.")
-            return
-
-        if target_position < 0 or target_position >= len(self.frames):
-            messagebox.showerror("Error", "Invalid target position.")
-            return
-
-        selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
-
-        if not selected_indices:
-            messagebox.showinfo("Info", "No frames selected to move.")
-            return
-
-        self.save_state()  # Save the state before making changes
-
-        # Get the selected frames and their delays
-        selected_frames = [self.frames[i] for i in selected_indices]
-        selected_delays = [self.delays[i] for i in selected_indices]
-
-        # Remove selected frames from their original positions
-        for index in reversed(selected_indices):
-            del self.frames[index]
-            del self.delays[index]
-            del self.checkbox_vars[index]
-
-        # Insert selected frames at the target position
-        for i, (frame, delay) in enumerate(zip(selected_frames, selected_delays)):
-            insert_position = target_position + i
-            self.frames.insert(insert_position, frame)
-            self.delays.insert(insert_position, delay)
-            var = IntVar(value=1)  # Check the checkbox for the moved frames
-            var.trace_add('write', lambda *args, i=insert_position: self.set_current_frame(i))
-            self.checkbox_vars.insert(insert_position, var)
-
-        self.update_frame_list()
-        self.show_frame()
-
-    def move_frame_up(self, event=None):
-        """Move the selected frame up in the list."""
-        selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
-
-        if len(selected_indices) != 1:
-            messagebox.showwarning("Selection Error", "Please select exactly one frame to move.")
-            return
-
-        selected_index = selected_indices[0]
-
-        if selected_index == 0:
-            messagebox.showinfo("Move Up", "The selected frame is already at the top.")
-            return
-
-        self.save_state()  # Save the state before making changes
-
-        # Swap the frames and delays
-        self.frames[selected_index], self.frames[selected_index - 1] = self.frames[selected_index - 1], self.frames[selected_index]
-        self.delays[selected_index], self.delays[selected_index - 1] = self.delays[selected_index - 1], self.delays[selected_index]
-
-        # Move the check state
-        self.checkbox_vars[selected_index].set(0)
-        self.checkbox_vars[selected_index - 1].set(1)
-
-        # Update the frame index to the new position of the moved frame
-        self.frame_index = selected_index - 1
-
-        self.update_frame_list()
-        self.show_frame()
-
-    def move_frame_down(self, event=None):
-        """Move the selected frame down in the list."""
-        selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
-
-        if len(selected_indices) != 1:
-            messagebox.showwarning("Selection Error", "Please select exactly one frame to move.")
-            return
-
-        selected_index = selected_indices[0]
-
-        if selected_index == len(self.frames) - 1:
-            messagebox.showinfo("Move Down", "The selected frame is already at the bottom.")
-            return
-
-        self.save_state()  # Save the state before making changes
-
-        # Swap the frames and delays
-        self.frames[selected_index], self.frames[selected_index + 1] = self.frames[selected_index + 1], self.frames[selected_index]
-        self.delays[selected_index], self.delays[selected_index + 1] = self.delays[selected_index + 1], self.delays[selected_index]
-
-        # Move the check state
-        self.checkbox_vars[selected_index].set(0)
-        self.checkbox_vars[selected_index + 1].set(1)
-
-        # Update the frame index to the new position of the moved frame
-        self.frame_index = selected_index + 1
-
-        self.update_frame_list()
-        self.show_frame()
-
-    def undo(self, event=None):
-        """Undo the last action."""
-        if self.history:
-            self.redo_stack.append((self.frames.copy(), self.delays.copy(), [var.get() for var in self.checkbox_vars], self.frame_index, self.current_file))
-            self.frames, self.delays, checkbox_states, self.frame_index, self.current_file = self.history.pop()
-            self.checkbox_vars = [IntVar(value=state) for state in checkbox_states]
-            for i, var in enumerate(self.checkbox_vars):
-                var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
-            self.base_size = self.frames[0].size if self.frames else None  # Reset base size based on the remaining frames
-            self.update_frame_list()
-            self.show_frame()
-            self.update_title()
-            self.check_all.set(False)  # Reset the check_all variable to ensure consistency
-
-    def redo(self, event=None):
-        """Redo the last undone action."""
-        if self.redo_stack:
-            self.history.append((self.frames.copy(), self.delays.copy(), [var.get() for var in self.checkbox_vars], self.frame_index, self.current_file))
-            self.frames, self.delays, checkbox_states, self.frame_index, self.current_file = self.redo_stack.pop()
-            self.checkbox_vars = [IntVar(value=state) for state in checkbox_states]
-            for i, var in enumerate(self.checkbox_vars):
-                var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
-            self.update_frame_list()
-            self.show_frame()
-            self.update_title()
-            self.check_all.set(False)  # Reset the check_all variable to ensure consistency
-
-    def copy_frames(self, event=None):
-        """Copy the selected frames to the clipboard."""
-        self.copied_frames = [(self.frames[i].copy(), self.delays[i]) for i in range(len(self.checkbox_vars)) if self.checkbox_vars[i].get() == 1]
-        if not self.copied_frames:
-            messagebox.showinfo("Info", "No frames selected to copy.")
-        else:
-            messagebox.showinfo("Info", f"Copied {len(self.copied_frames)} frame(s).")
-
-    def paste_frames(self, event=None):
-        """Paste the copied frames below the selected frames with all checkboxes checked."""
-        # Check if there are any frames copied
-        if not hasattr(self, 'copied_frames') or not self.copied_frames:
-            messagebox.showerror("Error", "No frames to paste. Please copy frames first.")
-            return
-
-        # Get the selected indices
-        selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
-        if not selected_indices:
-            messagebox.showinfo("Info", "No frames selected to paste after. Pasting at the end.")
-            insert_index = len(self.frames)
-        else:
-            insert_index = max(selected_indices) + 1
-
-        # Save the current state for undo functionality
-        self.save_state()
-
-        # Insert the copied frames and delays at the specified index
-        for frame, delay in self.copied_frames:
-            self.frames.insert(insert_index, frame)
-            self.delays.insert(insert_index, delay)
-            var = IntVar(value=1)  # Set the checkbox to be checked by default
-            var.trace_add('write', lambda *args, i=insert_index: self.set_current_frame(i))
-            self.checkbox_vars.insert(insert_index, var)
-            insert_index += 1
-
-        # Update the frame list and display the current frame
-        self.update_frame_list()
-        self.show_frame()
-
-    def rotate_selected_frames_180(self):
-        """Rotate the selected frames 180 degrees."""
-        self.save_state()  # Save the state before making changes
-        for i, frame in enumerate(self.frames):
-            if self.checkbox_vars[i].get() == 1:
-                self.frames[i] = frame.rotate(180)
-        self.update_frame_list()
-        self.show_frame()
-    
-    def rotate_selected_frames_90_cw(self):
-        """Rotate the selected frames 90 degrees clockwise."""
-        self.save_state()  # Save the state before making changes
-        for i, frame in enumerate(self.frames):
-            if self.checkbox_vars[i].get() == 1:
-                self.frames[i] = frame.rotate(-90, expand=True)
-        self.update_frame_list()
-        self.show_frame()
-
-    def rotate_selected_frames_90_ccw(self):
-        """Rotate the selected frames 90 degrees counterclockwise."""
-        self.save_state()  # Save the state before making changes
-        for i, frame in enumerate(self.frames):
-            if self.checkbox_vars[i].get() == 1:
-                self.frames[i] = frame.rotate(90, expand=True)
-        self.update_frame_list()
-        self.show_frame()
-
-    def rotate_selected_frames(self):
-        """Rotate the selected frames by a user-specified number of degrees."""
-        try:
-            angle = simpledialog.askfloat("Rotate Frames", "Enter the rotation angle in degrees:", parent=self.master)
-            if angle is None:  # User canceled the dialog
-                return
-
-            self.save_state()  # Save the state before making changes
-
-            for i, frame in enumerate(self.frames):
-                if self.checkbox_vars[i].get() == 1:
-                    self.frames[i] = frame.rotate(angle, expand=True)
-
-            self.update_frame_list()
-            self.show_frame()
-
-        except ValueError:
-            messagebox.showerror("Invalid Input", "Please enter a valid number for the rotation angle.")
-
-    def flip_selected_frames_horizontal(self):
-        """Flip the selected frames horizontally."""
-        self.save_state()  # Save the state before making changes
-        for i, frame in enumerate(self.frames):
-            if self.checkbox_vars[i].get() == 1:
-                self.frames[i] = frame.transpose(Image.FLIP_LEFT_RIGHT)
-        self.update_frame_list()
-        self.show_frame()
-
-    def flip_selected_frames_vertical(self):
-        """Flip the selected frames vertically."""
-        self.save_state()  # Save the state before making changes
-        for i, frame in enumerate(self.frames):
-            if self.checkbox_vars[i].get() == 1:
-                self.frames[i] = frame.transpose(Image.FLIP_TOP_BOTTOM)
-        self.update_frame_list()
-        self.show_frame()
-
     def toggle_check_all(self, event=None):
         """Toggle all checkboxes in the frame list without scrolling or changing the displayed frame."""
         self.save_state()  # Save the state before making changes
@@ -1221,6 +1253,8 @@ class GIFEditor:
                 self.frames[i] = frame.resize((new_width, new_height), Image.LANCZOS)
         self.update_frame_list()
         self.show_frame()
+
+# MENU EFFECTS
 
     def crossfade_effect(self):
         """Apply crossfade effect between checked frames with user-defined transition frames."""
@@ -2047,6 +2081,8 @@ class GIFEditor:
         self.update_frame_list()
         self.show_frame()
 
+# MENU ANIMATION
+
     def toggle_play_pause(self, event=None):
         """Toggle play/pause for the animation."""
         if self.is_playing:
@@ -2331,26 +2367,11 @@ class GIFEditor:
         scale_y = original_height / self.preview_height
         return int(x * scale_x), int(y * scale_y)
 
-    def change_preview_resolution(self):
-        """Change the preview resolution based on user input."""
-        MAX_WIDTH = 2560
-        MAX_HEIGHT = 1600
+# MENU HELP
 
-        resolution = simpledialog.askstring("Change Preview Resolution", "Enter new resolution (e.g., 800x600):")
-        if resolution:
-            try:
-                width, height = map(int, resolution.split('x'))
-                if width > 0 and height > 0:
-                    if width <= MAX_WIDTH and height <= MAX_HEIGHT:
-                        self.preview_width = width
-                        self.preview_height = height
-                        self.show_frame()  # Update the displayed frame with new resolution
-                    else:
-                        messagebox.showerror("Invalid Resolution", f"Resolution exceeds the maximum allowed size of {MAX_WIDTH}x{MAX_HEIGHT}.")
-                else:
-                    messagebox.showerror("Invalid Resolution", "Width and height must be positive integers.")
-            except ValueError:
-                messagebox.showerror("Invalid Format", "Please enter the resolution in the format '800x600'.")
+    def show_about(self):
+        """Display the About dialog."""
+        messagebox.showinfo("About GIFCraft", "GIFCraft - GIF Editor\nVersion 1.0\n© 2024 by Seehrum")
 
     def set_delay(self, event=None):
         """Set the delay for the selected frames."""
@@ -2375,10 +2396,6 @@ class GIFEditor:
             frame_widgets = self.frame_list.winfo_children()
             current_frame_widget = frame_widgets[self.frame_index]
             self.canvas.yview_moveto(current_frame_widget.winfo_y() / self.canvas.bbox("all")[3])
-
-    def show_about(self):
-        """Display the About dialog."""
-        messagebox.showinfo("About GIFCraft", "GIFCraft - GIF Editor\nVersion 1.0\n© 2024 by Seehrum")
 
     def setup_frame_list(self):
         """Set up the frame list with scrollbar."""
@@ -2498,32 +2515,6 @@ class GIFEditor:
         if self.checkbox_vars:
             current_var = self.checkbox_vars[self.frame_index]
             current_var.set(0 if current_var.get() else 1)
-
-    def next_frame(self, event=None):
-        """Show the next frame without altering the scrollbar position."""
-        if self.frame_index < len(self.frames) - 1:
-            self.frame_index += 1
-            self.show_frame()
-
-    def go_to_end(self, event=None):
-        """Move the cursor to the end of the frame list."""
-        if self.frames:
-            self.frame_index = len(self.frames) - 1
-            self.show_frame()
-            self.focus_current_frame()
-
-    def previous_frame(self, event=None):
-        """Show the previous frame without altering the scrollbar position."""
-        if self.frame_index > 0:
-            self.frame_index -= 1
-            self.show_frame()
-
-    def go_to_beginning(self, event=None):
-        """Move the cursor to the beginning of the frame list."""
-        if self.frames:
-            self.frame_index = 0
-            self.show_frame()
-            self.focus_current_frame()
 
     def resize_to_base_size(self, image):
         """Resize the image to the base size of the first frame and center it."""
