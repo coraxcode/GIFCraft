@@ -110,7 +110,8 @@ class GIFEditor:
         effects_menu.add_command(label="Desaturate Frames", command=self.desaturate_frames)
         effects_menu.add_command(label="Sharpness Effect", command=self.apply_sharpening_effect)
         effects_menu.add_command(label="Strange Sharpness Effect", command=self.apply_strange_sharpening_effect)
-        effects_menu.add_command(label="Ghost Detection Effect", command=self.ghost_detection_effect) 
+        effects_menu.add_command(label="Ghost Detection Effect", command=self.ghost_detection_effect)
+        effects_menu.add_command(label="Anaglyph Effect (3D)", command=self.apply_anaglyph_effect)
         effects_menu.add_command(label="Invert Colors", command=self.invert_colors_of_selected_frames)
         effects_menu.add_command(label="Glitch Effect", command=self.apply_random_glitch_effect)
         effects_menu.add_command(label="Sketch Effect", command=self.apply_sketch_effect)
@@ -1410,6 +1411,50 @@ class GIFEditor:
 
             self.show_frame()
             self.update_frame_list()
+
+    def apply_anaglyph_effect(self):
+        """Apply anaglyph (red-blue) effect to the selected frames with user-defined intensities for red and blue channels."""
+        self.save_state()  # Save the state before making changes
+
+        # Ask user for the intensity of the red channel offset
+        red_intensity = simpledialog.askinteger(
+            "Anaglyph Effect - Red Channel Intensity",
+            "Enter the intensity for the red channel (default is 5, recommended range 3-10):",
+            initialvalue=5,
+            minvalue=1,
+            maxvalue=20
+        )
+
+        if red_intensity is None:
+            return  # User cancelled the dialog
+
+        # Ask user for the intensity of the blue channel offset
+        blue_intensity = simpledialog.askinteger(
+            "Anaglyph Effect - Blue Channel Intensity",
+            "Enter the intensity for the blue channel (default is 5, recommended range 3-10):",
+            initialvalue=5,
+            minvalue=1,
+            maxvalue=20
+        )
+
+        if blue_intensity is None:
+            return  # User cancelled the dialog
+
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i].convert("RGB")
+                r, g, b = frame.split()
+
+                # Offset the red and blue channels
+                r = r.transform(r.size, Image.AFFINE, (1, 0, -red_intensity, 0, 1, 0))  # Red channel shifted to the left
+                b = b.transform(b.size, Image.AFFINE, (1, 0, blue_intensity, 0, 1, 0))  # Blue channel shifted to the right
+
+                anaglyph_frame = Image.merge("RGB", (r, g, b)).convert("RGBA")
+                self.frames[i] = anaglyph_frame
+
+        self.update_frame_list()
+        self.show_frame()
+
         
     def invert_colors_of_selected_frames(self):
         """Invert colors of the selected frames."""
