@@ -147,10 +147,11 @@ class GIFEditor:
         effects_menu.add_command(label="Invert Colors", command=self.invert_colors_of_selected_frames)
         effects_menu.add_command(label="Glitch Effect", command=self.apply_random_glitch_effect)
         effects_menu.add_command(label="Sketch Effect", command=self.apply_sketch_effect)
+        effects_menu.add_command(label="Tint", command=self.apply_tint)
         effects_menu.add_command(label="Adjust Brightness and Contrast", command=self.prompt_and_apply_brightness_contrast)
         effects_menu.add_command(label="Adjust Hue, Saturation, and Lightness", command=self.adjust_hsl)
         effects_menu.add_command(label="Zoom Effect", command=self.apply_zoom_effect)
-        effects_menu.add_command(label="Apply Zoom Effect Click", command=self.apply_zoom_effect_click)
+        effects_menu.add_command(label="Zoom Effect Click", command=self.apply_zoom_effect_click)
         effects_menu.add_command(label="Blur Effect", command=self.apply_blur_effect)
         effects_menu.add_command(label="Zoom and Speed Blur Effect", command=self.apply_zoom_and_speed_blur_effect) 
         effects_menu.add_command(label="Noise Effect", command=self.apply_noise_effect)
@@ -173,6 +174,20 @@ class GIFEditor:
         help_menu = Menu(self.menu_bar, tearoff=0)
         help_menu.add_command(label="About", command=self.show_about)
         self.menu_bar.add_cascade(label="Help", menu=help_menu)
+
+    def check_any_frame_selected(self):
+        """
+        Check if there is any frame with the checkbox marked.
+        If not, show a message informing that no checkbox is marked.
+        
+        Returns:
+            bool: True if a frame is selected, False otherwise.
+        """
+        if any(var.get() for var in self.checkbox_vars):
+            return True
+        else:
+            messagebox.showwarning("No Frame Selected", "No frames are selected. Please select a frame to apply the effect.")
+            return False
 
 # MENU FILE
 
@@ -468,6 +483,8 @@ class GIFEditor:
     def rotate_selected_frames_180(self):
         """Rotate the selected frames 180 degrees."""
         self.save_state()  # Save the state before making changes
+        if not self.check_any_frame_selected():
+            return
         for i, frame in enumerate(self.frames):
             if self.checkbox_vars[i].get() == 1:
                 self.frames[i] = frame.rotate(180)
@@ -477,6 +494,8 @@ class GIFEditor:
     def rotate_selected_frames_90_cw(self):
         """Rotate the selected frames 90 degrees clockwise."""
         self.save_state()  # Save the state before making changes
+        if not self.check_any_frame_selected():
+            return
         for i, frame in enumerate(self.frames):
             if self.checkbox_vars[i].get() == 1:
                 self.frames[i] = frame.rotate(-90, expand=True)
@@ -486,6 +505,8 @@ class GIFEditor:
     def rotate_selected_frames_90_ccw(self):
         """Rotate the selected frames 90 degrees counterclockwise."""
         self.save_state()  # Save the state before making changes
+        if not self.check_any_frame_selected():
+            return
         for i, frame in enumerate(self.frames):
             if self.checkbox_vars[i].get() == 1:
                 self.frames[i] = frame.rotate(90, expand=True)
@@ -494,6 +515,9 @@ class GIFEditor:
 
     def rotate_selected_frames(self):
         """Rotate the selected frames by a user-specified number of degrees."""
+        self.save_state()  # Save the state before making changes
+        if not self.check_any_frame_selected():
+            return
         try:
             angle = simpledialog.askfloat("Rotate Frames", "Enter the rotation angle in degrees:", parent=self.master)
             if angle is None:  # User canceled the dialog
@@ -514,6 +538,8 @@ class GIFEditor:
     def flip_selected_frames_horizontal(self):
         """Flip the selected frames horizontally."""
         self.save_state()  # Save the state before making changes
+        if not self.check_any_frame_selected():
+            return
         for i, frame in enumerate(self.frames):
             if self.checkbox_vars[i].get() == 1:
                 self.frames[i] = frame.transpose(Image.FLIP_LEFT_RIGHT)
@@ -523,6 +549,8 @@ class GIFEditor:
     def flip_selected_frames_vertical(self):
         """Flip the selected frames vertically."""
         self.save_state()  # Save the state before making changes
+        if not self.check_any_frame_selected():
+            return
         for i, frame in enumerate(self.frames):
             if self.checkbox_vars[i].get() == 1:
                 self.frames[i] = frame.transpose(Image.FLIP_TOP_BOTTOM)
@@ -1338,10 +1366,7 @@ class GIFEditor:
     def reverse_frames(self):
         """Apply reverse effect to the selected frames."""
         self.save_state()  # Save the state before making changes
-        indices_to_reverse = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
-        
-        if not indices_to_reverse:
-            messagebox.showinfo("Info", "No frames selected for reversing.")
+        if not self.check_any_frame_selected():
             return
 
         # Extract the selected frames and their delays
@@ -1363,6 +1388,8 @@ class GIFEditor:
     def desaturate_frames(self):
         """Apply desaturation effect to the selected frames."""
         self.save_state()  # Save the state before making changes
+        if not self.check_any_frame_selected():
+            return
         for i, var in enumerate(self.checkbox_vars):
             if var.get() == 1:
                 frame = self.frames[i]
@@ -1372,6 +1399,8 @@ class GIFEditor:
 
     def apply_sharpening_effect(self):
         """Apply a sharpening effect to the selected frames with user-defined intensity."""
+        if not self.check_any_frame_selected():
+            return
         # Prompt the user for the sharpening intensity
         sharpening_intensity = simpledialog.askfloat(
             "Sharpening Effect", 
@@ -1398,6 +1427,8 @@ class GIFEditor:
     def apply_strange_sharpening_effect(self):
         """Apply a specialized sharpening effect to the selected frames for ghost and UFO photo studies."""
         self.save_state()  # Save the state before making changes
+        if not self.check_any_frame_selected():
+            return
 
         for i, var in enumerate(self.checkbox_vars):
             if var.get() == 1:
@@ -1424,7 +1455,8 @@ class GIFEditor:
 
     def ghost_detection_effect(self):
         """Apply a ghost detection effect to the selected frames."""
-        from PIL import ImageEnhance, ImageOps, ImageFilter, ImageChops
+        if not self.check_any_frame_selected():
+            return
 
         # Function to enhance and apply a ghostly effect
         def apply_ghost_effect(frame):
@@ -1470,6 +1502,8 @@ class GIFEditor:
     def apply_anaglyph_effect(self):
         """Apply anaglyph (red-blue) effect to the selected frames with user-defined intensities for red and blue channels."""
         self.save_state()  # Save the state before making changes
+        if not self.check_any_frame_selected():
+            return
 
         # Ask user for the intensity of the red channel offset
         red_intensity = simpledialog.askinteger(
@@ -1528,6 +1562,8 @@ class GIFEditor:
 
     def apply_tint(self):
             """Apply a tint effect to the selected frames."""
+            if not self.check_any_frame_selected():
+                return
             # Prompt user for hex color code and intensity
             color_code = simpledialog.askstring("Tint Effect", "Enter tint color (hex code, e.g., #FF0000 for red):")
             if not color_code or not (color_code.startswith('#') and len(color_code) == 7):
@@ -1551,6 +1587,8 @@ class GIFEditor:
 
     def tint_image(self, image, color_code, intensity):
         """Tint an image with the given color and intensity."""
+        if not self.check_any_frame_selected():
+            return
         r, g, b = Image.new("RGB", (1, 1), color_code).getpixel((0, 0))
         intensity /= 100.0
 
@@ -1569,6 +1607,8 @@ class GIFEditor:
 
     def apply_random_glitch_effect(self):
         """Apply a random glitch effect to the selected frames."""
+        if not self.check_any_frame_selected():
+            return
         def glitch_frame(frame):
             """Apply glitch effect to a single frame."""
             width, height = frame.size
@@ -1631,6 +1671,8 @@ class GIFEditor:
     def apply_sketch_effect(self):
         """Apply a sketch effect to the selected frames."""
         self.save_state()  # Save the state before making changes
+        if not self.check_any_frame_selected():
+            return
 
         for i, var in enumerate(self.checkbox_vars):
             if var.get() == 1:
@@ -1648,6 +1690,8 @@ class GIFEditor:
 
     def prompt_and_apply_brightness_contrast(self):
         """Prompt the user for brightness and contrast levels, then apply the changes to selected frames."""
+        if not self.check_any_frame_selected():
+            return
         brightness = simpledialog.askfloat("Brightness", "Enter brightness level (e.g., 1.0 for no change):", minvalue=0.0)
         contrast = simpledialog.askfloat("Contrast", "Enter contrast level (e.g., 1.0 for no change):", minvalue=0.0)
         
@@ -1683,6 +1727,8 @@ class GIFEditor:
 
     def adjust_hsl(self):
         """Prompt the user for Hue, Saturation, and Lightness adjustments and apply them to selected frames."""
+        if not self.check_any_frame_selected():
+            return
         # Get user input for HSL adjustments
         hue_shift = simpledialog.askfloat("Adjust Hue", "Enter hue shift (-180 to 180):", minvalue=-180, maxvalue=180)
         if hue_shift is None:
@@ -1722,6 +1768,8 @@ class GIFEditor:
 
     def apply_zoom_effect(self):
         """Apply a zoom effect to the selected frames."""
+        if not self.check_any_frame_selected():
+            return
         # Prompt the user for the zoom intensity
         zoom_factor = simpledialog.askfloat("Zoom Effect", "Enter zoom intensity (e.g., 1.2 for 20% zoom in):", minvalue=0.1)
         if zoom_factor is None:
@@ -1752,6 +1800,8 @@ class GIFEditor:
 
     def apply_zoom_effect_click(self):
         """Apply a zoom effect to the selected frames."""
+        if not self.check_any_frame_selected():
+            return
         zoom_factor = simpledialog.askfloat("Zoom Effect", "Enter zoom factor (e.g., 2 for 200% zoom in, 0.5 for 50% zoom out):", minvalue=0.1)
         if zoom_factor is None:
             return
@@ -1828,6 +1878,8 @@ class GIFEditor:
 
     def apply_blur_effect(self):
         """Apply blur effect to selected frames with user-defined intensity."""
+        if not self.check_any_frame_selected():
+            return
         # Prompt user for blur intensity
         blur_intensity = simpledialog.askinteger("Blur Effect", "Enter blur intensity (e.g., 2 for slight blur):", minvalue=0)
         if blur_intensity is None or blur_intensity < 0:
@@ -1847,10 +1899,8 @@ class GIFEditor:
     def apply_zoom_and_speed_blur_effect(self):
         """Prompt user to apply a zoom or speed blur effect to selected frames."""
         # Check if there is at least one frame selected
-        if not any(var.get() for var in self.checkbox_vars):
-            messagebox.showinfo("Info", "No frames selected for applying the effect.")
+        if not self.check_any_frame_selected():
             return
-
         # Prompt user for effect type
         effect_type = simpledialog.askstring("Choose Effect", "Enter effect type (zoom or speed):")
         if effect_type is None:
@@ -1933,6 +1983,8 @@ class GIFEditor:
 
     def apply_noise_effect(self):
         """Apply a noise effect to the selected frames based on user-defined intensity."""
+        if not self.check_any_frame_selected():
+            return
         # Prompt the user for the noise intensity
         intensity = simpledialog.askinteger("Noise Effect", "Enter noise intensity (e.g., 10 for slight noise, 100 for heavy noise):", minvalue=1)
         if intensity is None or intensity < 1:
@@ -1971,6 +2023,8 @@ class GIFEditor:
 
     def apply_pixelate_effect(self):
         """Apply pixelate effect to selected frames with user-defined intensity."""
+        if not self.check_any_frame_selected():
+            return
         # Prompt user for pixelation intensity
         pixel_size = simpledialog.askinteger("Pixelate Effect", "Enter pixel size (e.g., 10 for blocky effect):", minvalue=1)
         if pixel_size is None or pixel_size < 1:
@@ -1994,6 +2048,8 @@ class GIFEditor:
 
     def reduce_transparency_of_checked_frames(self):
         """Reduce the transparency of the checked frames based on user-defined intensity."""
+        if not self.check_any_frame_selected():
+            return
         # Prompt the user for the transparency reduction intensity
         intensity = simpledialog.askfloat("Transparency Reduction", "Enter intensity (0 to 1):", minvalue=0.0, maxvalue=1.0)
         
