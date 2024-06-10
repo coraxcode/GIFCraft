@@ -199,45 +199,32 @@ class GIFEditor:
         self.update_title()
 
     def load_file(self, event=None):
-        """Load a GIF, PNG, or WebP file and extract its frames."""
-        if self.frames:
-            response = messagebox.askyesnocancel("Unsaved Changes", "Do you want to save the current file before loading a new one?")
-            if response:  # Yes
-                self.save()
-                if self.frames:  # If saving was cancelled or failed, do not proceed
-                    return
-            elif response is None:  # Cancel
-                return
-
-        file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.gif *.png *.webp")])
-        if not file_path:
+        """Load multiple image files (GIF, PNG, WEBP) and add them to the frame list."""
+        file_paths = filedialog.askopenfilenames(filetypes=[("Image files", "*.gif *.png *.webp")])
+        if not file_paths:
             return
 
         self.save_state()  # Save the state before making changes
-        self.frames = []
-        self.delays = []
-        self.checkbox_vars = []
-        for widget in self.frame_list.winfo_children():
-            widget.destroy()
 
         try:
-            with Image.open(file_path) as img:
-                for i, frame in enumerate(ImageSequence.Iterator(img)):
-                    if i == 0:
-                        self.base_size = frame.size  # Store the size of the first frame
-                    self.frames.append(self.resize_to_base_size(frame.copy()))
-                    delay = int(frame.info.get('duration', 100))  # Ensure delay is always an integer
-                    self.delays.append(delay)
-                    var = IntVar()
-                    var.trace_add('write', lambda *args, i=len(self.checkbox_vars): self.set_current_frame(i))
-                    self.checkbox_vars.append(var)
+            for file_path in file_paths:
+                with Image.open(file_path) as img:
+                    for frame in ImageSequence.Iterator(img):
+                        if not self.frames:
+                            self.base_size = frame.size  # Store the size of the first frame
+                        resized_frame = self.resize_to_base_size(frame.copy())
+                        self.frames.append(resized_frame)
+                        delay = int(frame.info.get('duration', 100))  # Ensure delay is always an integer
+                        self.delays.append(delay)
+                        var = IntVar()
+                        var.trace_add('write', lambda *args, i=len(self.checkbox_vars): self.set_current_frame(i))
+                        self.checkbox_vars.append(var)
             self.frame_index = 0
             self.update_frame_list()
             self.show_frame()
-            self.current_file = file_path
             self.update_title()
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to load file: {e}")
+            messagebox.showerror("Error", f"Failed to load files: {e}")
 
     def save(self, event=None):
         """Save the current frames and delays to a GIF file."""
