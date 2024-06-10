@@ -144,6 +144,7 @@ class GIFEditor:
         effects_menu.add_command(label="Strange Sharpness Effect", command=self.apply_strange_sharpening_effect)
         effects_menu.add_command(label="Ghost Detection Effect", command=self.ghost_detection_effect)
         effects_menu.add_command(label="Anaglyph Effect (3D)", command=self.apply_anaglyph_effect)
+        effects_menu.add_command(label="Kinetoscope Effect", command=self.apply_kinetoscope_effect)
         effects_menu.add_command(label="Invert Colors", command=self.invert_colors_of_selected_frames)
         effects_menu.add_command(label="Glitch Effect", command=self.apply_random_glitch_effect)
         effects_menu.add_command(label="Sketch Effect", command=self.apply_sketch_effect)
@@ -1544,6 +1545,104 @@ class GIFEditor:
         self.update_frame_list()
         self.show_frame()
 
+    def apply_kinetoscope_effect(self):
+        """Apply an old Kinetoscope film effect to the selected frames with configurable intensity."""
+        if not self.check_any_frame_selected():
+            return
+
+        self.save_state()  # Save the state before making changes
+
+        # Default intensity values
+        default_noise_intensity = 30
+        default_scratches_intensity = 10
+        default_sepia_intensity = 1.0  # Sepia intensity is a factor, not percentage
+        default_jitter_intensity = 5
+
+        # Prompt user for intensity values
+        noise_intensity = simpledialog.askinteger("Noise Intensity", "Enter noise intensity (0-100):", initialvalue=default_noise_intensity, minvalue=0, maxvalue=100)
+        if noise_intensity is None:
+            noise_intensity = default_noise_intensity
+
+        scratches_intensity = simpledialog.askinteger("Scratches Intensity", "Enter number of scratches (0-100):", initialvalue=default_scratches_intensity, minvalue=0, maxvalue=100)
+        if scratches_intensity is None:
+            scratches_intensity = default_scratches_intensity
+
+        sepia_intensity = simpledialog.askfloat("Sepia Intensity", "Enter sepia intensity (0.0-2.0):", initialvalue=default_sepia_intensity, minvalue=0.0, maxvalue=2.0)
+        if sepia_intensity is None:
+            sepia_intensity = default_sepia_intensity
+
+        jitter_intensity = simpledialog.askinteger("Jitter Intensity", "Enter jitter intensity (0-20):", initialvalue=default_jitter_intensity, minvalue=0, maxvalue=20)
+        if jitter_intensity is None:
+            jitter_intensity = default_jitter_intensity
+
+        def add_noise(frame, intensity):
+            """Add noise to the frame."""
+            width, height = frame.size
+            pixels = frame.load()
+            for _ in range(int(width * height * intensity / 100)):
+                x = random.randint(0, width - 1)
+                y = random.randint(0, height - 1)
+                noise = random.randint(-intensity, intensity)
+                r, g, b, a = pixels[x, y]
+                pixels[x, y] = (max(0, min(255, r + noise)), max(0, min(255, g + noise)), max(0, min(255, b + noise)), a)
+            return frame
+
+        def add_scratches(frame, num_scratches):
+            """Add realistic scratches to the frame."""
+            draw = ImageDraw.Draw(frame)
+            width, height = frame.size
+            for _ in range(num_scratches):
+                x_start = random.randint(0, width - 1)
+                y_start = random.randint(0, height - 1)
+                length = random.randint(20, 100)  # Length of the scratch
+                angle = random.uniform(-0.5, 0.5)  # Small angle to simulate vertical scratches
+                for i in range(length):
+                    x = int(x_start + i * angle)
+                    y = y_start + i
+                    if 0 <= x < width and 0 <= y < height:
+                        # Draw a small dot to make it look like a scratch
+                        draw.line([(x, y), (x, y)], fill=(255, 255, 255, 255), width=1)
+            return frame
+
+        def apply_sepia(frame, intensity):
+            """Apply a sepia tone to the frame."""
+            width, height = frame.size
+            pixels = frame.load()
+            for y in range(height):
+                for x in range(width):
+                    r, g, b, a = pixels[x, y]
+
+                    tr = int(0.393 * r + 0.769 * g + 0.189 * b)
+                    tg = int(0.349 * r + 0.686 * g + 0.168 * b)
+                    tb = int(0.272 * r + 0.534 * g + 0.131 * b)
+
+                    tr = min(255, int(tr * intensity))
+                    tg = min(255, int(tg * intensity))
+                    tb = min(255, int(tb * intensity))
+
+                    pixels[x, y] = (tr, tg, tb, a)
+            return frame
+
+        def jitter_frame(frame, max_jitter):
+            """Jitter the frame slightly to simulate film jitter."""
+            width, height = frame.size
+            jitter_x = random.randint(-max_jitter, max_jitter)
+            jitter_y = random.randint(-max_jitter, max_jitter)
+            new_frame = Image.new("RGBA", frame.size, (0, 0, 0, 0))
+            new_frame.paste(frame, (jitter_x, jitter_y))
+            return new_frame
+
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i].convert("RGBA")
+                frame = add_noise(frame, noise_intensity)
+                frame = add_scratches(frame, scratches_intensity)
+                frame = apply_sepia(frame, sepia_intensity)
+                frame = jitter_frame(frame, jitter_intensity)
+                self.frames[i] = frame
+
+        self.update_frame_list()
+        self.show_frame()
         
     def invert_colors_of_selected_frames(self):
         """Invert colors of the selected frames."""
