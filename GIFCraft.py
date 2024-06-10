@@ -1,10 +1,11 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk, colorchooser
 from tkinter import Menu, Checkbutton, IntVar, Scrollbar, Frame, Canvas
-from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageSequence, ImageOps, ImageEnhance, ImageFilter
+from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageSequence, ImageOps, ImageEnhance, ImageFilter, ImageChops, ImageColor
 import os
 import random
 import platform
+import numpy as np
 import threading
 import time
 import cv2
@@ -143,6 +144,8 @@ class GIFEditor:
         effects_menu.add_command(label="Sharpness Effect", command=self.apply_sharpening_effect)
         effects_menu.add_command(label="Strange Sharpness Effect", command=self.apply_strange_sharpening_effect)
         effects_menu.add_command(label="Posterize Effect", command=self.apply_posterize_effect)
+        effects_menu.add_command(label="Halftones Effect", command=self.apply_halftones_effect)
+        effects_menu.add_command(label="Vignette Effect", command=self.apply_vignette_effect)
         effects_menu.add_command(label="Ghost Detection Effect", command=self.ghost_detection_effect)
         effects_menu.add_command(label="Anaglyph Effect (3D)", command=self.apply_anaglyph_effect)
         effects_menu.add_command(label="Kinetoscope Effect", command=self.apply_kinetoscope_effect)
@@ -1485,6 +1488,139 @@ class GIFEditor:
 
         self.update_frame_list()
         self.show_frame()
+
+    def apply_halftones_effect(self):
+            """Apply a halftones effect to the selected frames."""
+            if not self.check_any_frame_selected():
+                return
+
+            # Default intensity values
+            default_halftones_intensity = 10
+
+            # Prompt user for intensity values
+            halftones_intensity = simpledialog.askinteger(
+                "Halftones Intensity",
+                "Enter halftones intensity (1-100):",
+                initialvalue=default_halftones_intensity,
+                minvalue=1,
+                maxvalue=100
+            )
+            if halftones_intensity is None:
+                halftones_intensity = default_halftones_intensity
+
+            # Prompt user for shape
+            shape = simpledialog.askstring(
+                "Halftones Shape",
+                "Enter halftones shape (dot/square):",
+                initialvalue="dot"
+            )
+            if shape is None or shape.lower() not in ["dot", "square"]:
+                shape = "dot"
+
+            self.save_state()  # Save the state before making changes
+
+            def halftones_effect(frame, intensity, shape):
+                """Convert the frame to a halftones style effect."""
+                frame = frame.convert("L")  # Convert to grayscale
+                width, height = frame.size
+                pixels = np.array(frame)
+
+                # Create a new image for the halftone effect
+                halftone_frame = Image.new("L", (width, height), "white")
+                draw = ImageDraw.Draw(halftone_frame)
+
+                dot_size = int(256 / intensity)
+                for y in range(0, height, dot_size):
+                    for x in range(0, width, dot_size):
+                        # Calculate the average brightness in the dot's area
+                        region = pixels[y:y + dot_size, x:x + dot_size]
+                        brightness = np.mean(region)
+
+                        # Map brightness to dot size
+                        size = dot_size * (1 - brightness / 255.0)
+                        if shape == "dot":
+                            draw.ellipse(
+                                (x, y, x + size, y + size),
+                                fill="black"
+                            )
+                        elif shape == "square":
+                            draw.rectangle(
+                                (x, y, x + size, y + size),
+                                fill="black"
+                            )
+
+                return halftone_frame.convert("RGBA")
+
+            for i, var in enumerate(self.checkbox_vars):
+                if var.get() == 1:
+                    frame = self.frames[i].convert("RGBA")
+                    frame = halftones_effect(frame, halftones_intensity, shape)
+                    self.frames[i] = frame
+
+            self.update_frame_list()
+            self.show_frame()
+
+    def apply_vignette_effect(self):
+            """Apply a vignette effect to the selected frames."""
+            if not self.check_any_frame_selected():
+                return
+
+            # Default intensity and color values
+            default_vignette_intensity = 50
+            default_vignette_color = "#000000"
+
+            # Prompt user for intensity values
+            vignette_intensity = simpledialog.askinteger(
+                "Vignette Intensity",
+                "Enter vignette intensity (1-100):",
+                initialvalue=default_vignette_intensity,
+                minvalue=1,
+                maxvalue=100
+            )
+            if vignette_intensity is None:
+                vignette_intensity = default_vignette_intensity
+
+            # Prompt user for color
+            vignette_color = colorchooser.askcolor(
+                title="Choose Vignette Color",
+                initialcolor=default_vignette_color
+            )[1]
+            if vignette_color is None:
+                vignette_color = default_vignette_color
+
+            self.save_state()  # Save the state before making changes
+
+            def vignette_effect(frame, intensity, color):
+                """Apply a vignette effect to the frame."""
+                width, height = frame.size
+                vignette = Image.new("RGBA", (width, height), color + "00")
+                draw = ImageDraw.Draw(vignette)
+
+                # Calculate the maximum distance from the center
+                max_distance = np.sqrt((width / 2) ** 2 + (height / 2) ** 2)
+
+                # Draw the vignette
+                for y in range(height):
+                    for x in range(width):
+                        # Calculate the distance from the center
+                        distance = np.sqrt((x - width / 2) ** 2 + (y - height / 2) ** 2)
+                        # Calculate the alpha value based on distance and intensity
+                        alpha = int(255 * (distance / max_distance) * (intensity / 100))
+                        alpha = min(255, alpha)
+                        r, g, b = ImageColor.getrgb(color)
+                        vignette.putpixel((x, y), (r, g, b, alpha))
+
+                # Blend the vignette with the original frame
+                return Image.alpha_composite(frame, vignette)
+
+            for i, var in enumerate(self.checkbox_vars):
+                if var.get() == 1:
+                    frame = self.frames[i].convert("RGBA")
+                    frame = vignette_effect(frame, vignette_intensity, vignette_color)
+                    self.frames[i] = frame
+
+            self.update_frame_list()
+            self.show_frame()
 
     def ghost_detection_effect(self):
         """Apply a ghost detection effect to the selected frames."""
