@@ -1568,6 +1568,7 @@ class GIFEditor:
             # Default intensity and color values
             default_vignette_intensity = 50
             default_vignette_color = "#000000"
+            default_vignette_shape = "round"
 
             # Prompt user for intensity values
             vignette_intensity = simpledialog.askinteger(
@@ -1588,35 +1589,49 @@ class GIFEditor:
             if vignette_color is None:
                 vignette_color = default_vignette_color
 
+            # Prompt user for shape
+            vignette_shape = simpledialog.askstring(
+                "Vignette Shape",
+                "Enter vignette shape (round/square):",
+                initialvalue=default_vignette_shape
+            )
+            if vignette_shape is None or vignette_shape.lower() not in ["round", "square"]:
+                vignette_shape = default_vignette_shape
+
             self.save_state()  # Save the state before making changes
 
-            def vignette_effect(frame, intensity, color):
+            def vignette_effect(frame, intensity, color, shape):
                 """Apply a vignette effect to the frame."""
                 width, height = frame.size
                 vignette = Image.new("RGBA", (width, height), color + "00")
                 draw = ImageDraw.Draw(vignette)
 
-                # Calculate the maximum distance from the center
-                max_distance = np.sqrt((width / 2) ** 2 + (height / 2) ** 2)
+                if shape == "round":
+                    max_distance = np.sqrt((width / 2) ** 2 + (height / 2) ** 2)
+                    for y in range(height):
+                        for x in range(width):
+                            distance = np.sqrt((x - width / 2) ** 2 + (y - height / 2) ** 2)
+                            alpha = int(255 * (distance / max_distance) * (intensity / 100))
+                            alpha = min(255, alpha)
+                            r, g, b = ImageColor.getrgb(color)
+                            vignette.putpixel((x, y), (r, g, b, alpha))
+                elif shape == "square":
+                    for y in range(height):
+                        for x in range(width):
+                            distance_x = abs(x - width / 2)
+                            distance_y = abs(y - height / 2)
+                            max_distance = max(distance_x, distance_y)
+                            alpha = int(255 * (max_distance / (max(width, height) / 2)) * (intensity / 100))
+                            alpha = min(255, alpha)
+                            r, g, b = ImageColor.getrgb(color)
+                            vignette.putpixel((x, y), (r, g, b, alpha))
 
-                # Draw the vignette
-                for y in range(height):
-                    for x in range(width):
-                        # Calculate the distance from the center
-                        distance = np.sqrt((x - width / 2) ** 2 + (y - height / 2) ** 2)
-                        # Calculate the alpha value based on distance and intensity
-                        alpha = int(255 * (distance / max_distance) * (intensity / 100))
-                        alpha = min(255, alpha)
-                        r, g, b = ImageColor.getrgb(color)
-                        vignette.putpixel((x, y), (r, g, b, alpha))
-
-                # Blend the vignette with the original frame
                 return Image.alpha_composite(frame, vignette)
 
             for i, var in enumerate(self.checkbox_vars):
                 if var.get() == 1:
                     frame = self.frames[i].convert("RGBA")
-                    frame = vignette_effect(frame, vignette_intensity, vignette_color)
+                    frame = vignette_effect(frame, vignette_intensity, vignette_color, vignette_shape)
                     self.frames[i] = frame
 
             self.update_frame_list()
