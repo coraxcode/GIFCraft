@@ -142,6 +142,7 @@ class GIFEditor:
         effects_menu.add_command(label="Desaturate Frames", command=self.desaturate_frames)
         effects_menu.add_command(label="Sharpness Effect", command=self.apply_sharpening_effect)
         effects_menu.add_command(label="Strange Sharpness Effect", command=self.apply_strange_sharpening_effect)
+        effects_menu.add_command(label="Posterize Effect", command=self.apply_posterize_effect)
         effects_menu.add_command(label="Ghost Detection Effect", command=self.ghost_detection_effect)
         effects_menu.add_command(label="Anaglyph Effect (3D)", command=self.apply_anaglyph_effect)
         effects_menu.add_command(label="Kinetoscope Effect", command=self.apply_kinetoscope_effect)
@@ -1451,6 +1452,37 @@ class GIFEditor:
                 # Convert back to RGBA (if needed)
                 self.frames[i] = enhanced_frame.convert("RGBA")
         
+        self.update_frame_list()
+        self.show_frame()
+
+    def apply_posterize_effect(self):
+        """Apply a posterize effect to the selected frames with configurable intensity."""
+        if not self.check_any_frame_selected():
+            return
+
+        # Default intensity value
+        default_levels = 4  # Default number of posterization levels
+
+        # Prompt user for intensity value
+        levels = simpledialog.askinteger("Posterize Intensity", "Enter number of levels (2-20):", initialvalue=default_levels, minvalue=2, maxvalue=20)
+        if levels is None:
+            levels = default_levels
+
+        self.save_state()  # Save the state before making changes
+
+        def posterize(frame, levels):
+            """Posterize the frame to the specified number of levels."""
+            # Convert to grayscale
+            frame = frame.convert("RGB")
+            quantized = frame.quantize(colors=levels, method=Image.FASTOCTREE)
+            return quantized.convert("RGBA")
+
+        for i, var in enumerate(self.checkbox_vars):
+            if var.get() == 1:
+                frame = self.frames[i].convert("RGBA")
+                frame = posterize(frame, levels)
+                self.frames[i] = frame
+
         self.update_frame_list()
         self.show_frame()
 
