@@ -115,9 +115,9 @@ class GIFEditor:
         frames_menu.add_command(label="Move Frame Down", command=self.move_frame_down, accelerator="Arrow Down")
         frames_menu.add_command(label="Move Selected Frames", command=self.prompt_and_move_selected_frames)
         frames_menu.add_separator()   
-        frames_menu.add_command(label="Merge Selected Frames", command=self.merge_frames)
+        frames_menu.add_command(label="Merge Selected Frames", command=self.merge_frames, accelerator="M")
         frames_menu.add_separator()
-        frames_menu.add_command(label="Add Image", command=self.add_image)
+        frames_menu.add_command(label="Add Image", command=self.add_image, accelerator="Ctrl+I")
         frames_menu.add_command(label="Add Text", command=self.add_text_frame)
         frames_menu.add_command(label="Apply Frame 1", command=self.apply_frame_1_)
         frames_menu.add_command(label="Add Overlay Frame", command=self.apply_overlay_frame)
@@ -128,7 +128,7 @@ class GIFEditor:
         frames_menu.add_command(label="Check/Uncheck All", command=self.toggle_check_all, accelerator="A")
         frames_menu.add_command(label="Check Even or Odd Frames", command=self.mark_even_odd_frames)
         frames_menu.add_command(label="Check Frames Relative to Cursor", command=self.mark_frames_relative_to_cursor)
-        frames_menu.add_command(label="Go to Frame", command=self.go_to_frame)
+        frames_menu.add_command(label="Go to Frame", command=self.go_to_frame, accelerator="Ctrl+G")
         frames_menu.add_separator()
         frames_menu.add_command(label="Crop Frames", command=self.crop_frames)
         frames_menu.add_command(label="Resize Frames", command=self.resize_frames_dialog)
@@ -718,7 +718,7 @@ class GIFEditor:
         self.show_frame()
         messagebox.showinfo("Success", "Frames merged successfully!")
 
-    def add_image(self):
+    def add_image(self, event=None):
         """Add images to the frames."""
         file_paths = filedialog.askopenfilenames(filetypes=[("Image files", "*.jpg *.jpeg *.png *.webp *.gif *.bmp")])
         if not file_paths:
@@ -2523,6 +2523,8 @@ class GIFEditor:
         self.master.bind("<Delete>", self.delete_frames)
         self.master.bind("<Control-Delete>", self.delete_unchecked_frames)
         self.master.bind("<space>", self.toggle_play_pause)
+        self.master.bind("<Control-i>", self.add_image)
+        self.master.bind("<Control-I>", self.add_image)
         self.master.bind("<Control-c>", self.copy_frames)
         self.master.bind("<Control-C>", self.copy_frames)
         self.master.bind("<Control-v>", self.paste_frames)
