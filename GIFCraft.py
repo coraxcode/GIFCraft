@@ -279,6 +279,25 @@ class GIFEditor:
         if not output_dir:
             return
 
+        # Ask the user whether to extract all frames or from a certain time range
+        extract_all = messagebox.askyesno("Extract All Frames", "Do you want to extract all frames from the video?")
+        start_time_seconds, end_time_seconds = None, None
+
+        if not extract_all:
+            # Ask for the start and end times
+            start_time_str = simpledialog.askstring("Start Time", "Enter start time (HH:MM:SS):")
+            end_time_str = simpledialog.askstring("End Time", "Enter end time (HH:MM:SS):")
+
+            if not start_time_str or not end_time_str:
+                return
+
+            try:
+                start_time_seconds = self.time_str_to_seconds(start_time_str)
+                end_time_seconds = self.time_str_to_seconds(end_time_str)
+            except ValueError:
+                messagebox.showerror("Invalid Time Format", "Please enter a valid time format (HH:MM:SS).")
+                return
+
         def cancel_extraction():
             nonlocal cancel
             cancel = True
@@ -294,20 +313,30 @@ class GIFEditor:
                     progress_window.destroy()
                     return
 
+                fps = cap.get(cv2.CAP_PROP_FPS)
                 frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
                 extracted_frames = 0
-                success, frame = cap.read()
 
-                while success and not cancel:
+                # Calculate frame range
+                start_frame = int(start_time_seconds * fps) if start_time_seconds is not None else 0
+                end_frame = int(end_time_seconds * fps) if end_time_seconds is not None else frame_count
+
+                cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+
+                success, frame = cap.read()
+                current_frame = start_frame
+
+                while success and not cancel and current_frame <= end_frame:
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     image = Image.fromarray(frame)
                     frame_path = os.path.join(output_dir, f"frame_{extracted_frames + 1}.png")
                     image.save(frame_path)
                     extracted_frames += 1
 
-                    progress_var.set((extracted_frames / frame_count) * 100)
+                    progress_var.set((extracted_frames / (end_frame - start_frame)) * 100)
                     progress_window.update_idletasks()
                     success, frame = cap.read()
+                    current_frame += 1
 
                 cap.release()
                 end_time = time.time()
@@ -336,6 +365,11 @@ class GIFEditor:
 
         extraction_thread = threading.Thread(target=extract_frames)
         extraction_thread.start()
+
+    def time_str_to_seconds(self, time_str):
+        """Convert time string in HH:MM:SS format to seconds."""
+        h, m, s = map(int, time_str.split(':'))
+        return h * 3600 + m * 60 + s
 
     def extract_frames_gif(self):
         """Extract the frames and save them as individual images."""
@@ -654,7 +688,7 @@ class GIFEditor:
         self.update_frame_list()
         self.show_frame()
 
-    def merge_frames(self):
+    def merge_frames(self, event=None):
         """Merge the checked frames from top to bottom respecting transparency."""
         self.save_state()  # Save the state before making changes
 
@@ -2499,6 +2533,8 @@ class GIFEditor:
         self.master.bind("<Control-Y>", self.redo)
         self.master.bind("<Control-s>", self.save)
         self.master.bind("<Control-S>", self.save_as)
+        self.master.bind('m', self.merge_frames)
+        self.master.bind('M', self.merge_frames)
         self.master.bind("x", self.toggle_checkbox)
         self.master.bind("X", self.toggle_checkbox)
         self.master.bind("w", self.toggle_draw_mode)
