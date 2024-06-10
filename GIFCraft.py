@@ -1212,7 +1212,7 @@ class GIFEditor:
 
         self.update_frame_list()
 
-    def go_to_frame(self):
+    def go_to_frame(self, event=None):
         """Prompt the user to enter a frame number and go to that frame."""
         if not self.frames:
             messagebox.showerror("Error", "No frames available.")
@@ -2527,14 +2527,16 @@ class GIFEditor:
         self.master.bind("<Control-C>", self.copy_frames)
         self.master.bind("<Control-v>", self.paste_frames)
         self.master.bind("<Control-V>", self.paste_frames)
-        self.master.bind("<Control-z>", self.undo)
+        self.master.bind("<Control-g>", self.go_to_frame)
+        self.master.bind("<Control-G>", self.go_to_frame)
+        self.master.bind("<Control-z>", self.undo) 
         self.master.bind("<Control-Z>", self.undo)
         self.master.bind("<Control-y>", self.redo)
         self.master.bind("<Control-Y>", self.redo)
         self.master.bind("<Control-s>", self.save)
         self.master.bind("<Control-S>", self.save_as)
-        self.master.bind('m', self.merge_frames)
-        self.master.bind('M', self.merge_frames)
+        self.master.bind("m", self.merge_frames)
+        self.master.bind("M", self.merge_frames)
         self.master.bind("x", self.toggle_checkbox)
         self.master.bind("X", self.toggle_checkbox)
         self.master.bind("w", self.toggle_draw_mode)
