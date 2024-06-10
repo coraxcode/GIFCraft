@@ -686,21 +686,21 @@ class GIFEditor:
             messagebox.showinfo("Info", "No frames selected for merging.")
             return
 
-        # Merge the frames
-        base_frame = self.frames[checked_indices[0]].copy()
-        for index in checked_indices[1:]:
+        # Merge the frames from bottom to top
+        base_frame = self.frames[checked_indices[-1]].copy()
+        for index in reversed(checked_indices[:-1]):
             frame = self.frames[index]
             base_frame = Image.alpha_composite(base_frame, frame)
 
-        # Replace the first checked frame with the merged frame
-        self.frames[checked_indices[0]] = base_frame
+        # Replace the last checked frame with the merged frame
+        self.frames[checked_indices[-1]] = base_frame
         # Remove the other checked frames
-        for index in reversed(checked_indices[1:]):
+        for index in reversed(checked_indices[:-1]):
             del self.frames[index]
             del self.delays[index]
             del self.checkbox_vars[index]
 
-        self.frame_index = checked_indices[0]
+        self.frame_index = checked_indices[-1]
         self.update_frame_list()
         self.show_frame()
         messagebox.showinfo("Success", "Frames merged successfully!")
