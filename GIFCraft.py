@@ -1842,7 +1842,7 @@ class GIFEditor:
             num_lines = max(1, int(width * intensity / 100))  # Ensure at least one line
             for _ in range(num_lines):
                 x = random.randint(0, width - 1)
-                line_thickness = random.randint(1, 2)  # Reduced thickness for a finer line
+                line_thickness = 1  # Thin lines for a more authentic old film effect
                 draw.line([(x, 0), (x, height)], fill=color, width=line_thickness)
             return frame
 
