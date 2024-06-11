@@ -1740,23 +1740,43 @@ class GIFEditor:
         default_scratches_intensity = 10
         default_sepia_intensity = 1.0  # Sepia intensity is a factor, not percentage
         default_jitter_intensity = 5
+        default_vertical_lines_intensity = 5  # New intensity for vertical lines
 
         # Prompt user for intensity values
-        noise_intensity = simpledialog.askinteger("Noise Intensity", "Enter noise intensity (0-100):", initialvalue=default_noise_intensity, minvalue=0, maxvalue=100)
+        noise_intensity = simpledialog.askinteger(
+            "Noise Intensity", "Enter noise intensity (0-100):", initialvalue=default_noise_intensity, minvalue=0, maxvalue=100)
         if noise_intensity is None:
             noise_intensity = default_noise_intensity
 
-        scratches_intensity = simpledialog.askinteger("Scratches Intensity", "Enter number of scratches (0-100):", initialvalue=default_scratches_intensity, minvalue=0, maxvalue=100)
+        scratches_intensity = simpledialog.askinteger(
+            "Scratches Intensity", "Enter number of scratches (0-100):", initialvalue=default_scratches_intensity, minvalue=0, maxvalue=100)
         if scratches_intensity is None:
             scratches_intensity = default_scratches_intensity
 
-        sepia_intensity = simpledialog.askfloat("Sepia Intensity", "Enter sepia intensity (0.0-2.0):", initialvalue=default_sepia_intensity, minvalue=0.0, maxvalue=2.0)
+        sepia_intensity = simpledialog.askfloat(
+            "Sepia Intensity", "Enter sepia intensity (0.0-2.0):", initialvalue=default_sepia_intensity, minvalue=0.0, maxvalue=2.0)
         if sepia_intensity is None:
             sepia_intensity = default_sepia_intensity
 
-        jitter_intensity = simpledialog.askinteger("Jitter Intensity", "Enter jitter intensity (0-20):", initialvalue=default_jitter_intensity, minvalue=0, maxvalue=20)
+        jitter_intensity = simpledialog.askinteger(
+            "Jitter Intensity", "Enter jitter intensity (0-20):", initialvalue=default_jitter_intensity, minvalue=0, maxvalue=20)
         if jitter_intensity is None:
             jitter_intensity = default_jitter_intensity
+
+        vertical_lines_intensity = simpledialog.askinteger(
+            "Vertical Lines Intensity", "Enter vertical lines intensity (0-100):", initialvalue=default_vertical_lines_intensity, minvalue=0, maxvalue=100)
+        if vertical_lines_intensity is None:
+            vertical_lines_intensity = default_vertical_lines_intensity
+
+        vertical_lines_color = simpledialog.askstring(
+            "Vertical Lines Color", "Enter vertical lines color in hexadecimal (e.g., #FFFFFF):", initialvalue="#FFFFFF")
+        if vertical_lines_color is None:
+            vertical_lines_color = "#FFFFFF"
+
+        scratches_color = simpledialog.askstring(
+            "Scratches Color", "Enter scratches color in hexadecimal (e.g., #FFFFFF):", initialvalue="#FFFFFF")
+        if scratches_color is None:
+            scratches_color = "#FFFFFF"
 
         def add_noise(frame, intensity):
             """Add noise to the frame."""
@@ -1770,7 +1790,7 @@ class GIFEditor:
                 pixels[x, y] = (max(0, min(255, r + noise)), max(0, min(255, g + noise)), max(0, min(255, b + noise)), a)
             return frame
 
-        def add_scratches(frame, num_scratches):
+        def add_scratches(frame, num_scratches, color):
             """Add realistic scratches to the frame."""
             draw = ImageDraw.Draw(frame)
             width, height = frame.size
@@ -1784,7 +1804,7 @@ class GIFEditor:
                     y = y_start + i
                     if 0 <= x < width and 0 <= y < height:
                         # Draw a small dot to make it look like a scratch
-                        draw.line([(x, y), (x, y)], fill=(255, 255, 255, 255), width=1)
+                        draw.line([(x, y), (x, y)], fill=color, width=1)
             return frame
 
         def apply_sepia(frame, intensity):
@@ -1815,13 +1835,26 @@ class GIFEditor:
             new_frame.paste(frame, (jitter_x, jitter_y))
             return new_frame
 
+        def add_vertical_lines(frame, intensity, color):
+            """Add random vertical lines to the frame to simulate an old film effect."""
+            draw = ImageDraw.Draw(frame)
+            width, height = frame.size
+            num_lines = max(1, int(width * intensity / 100))  # Ensure at least one line
+            for _ in range(num_lines):
+                x = random.randint(0, width - 1)
+                line_thickness = random.randint(1, 2)  # Reduced thickness for a finer line
+                draw.line([(x, 0), (x, height)], fill=color, width=line_thickness)
+            return frame
+
+        # Apply effects to each selected frame
         for i, var in enumerate(self.checkbox_vars):
             if var.get() == 1:
                 frame = self.frames[i].convert("RGBA")
                 frame = add_noise(frame, noise_intensity)
-                frame = add_scratches(frame, scratches_intensity)
+                frame = add_scratches(frame, scratches_intensity, scratches_color)
                 frame = apply_sepia(frame, sepia_intensity)
                 frame = jitter_frame(frame, jitter_intensity)
+                frame = add_vertical_lines(frame, vertical_lines_intensity, vertical_lines_color)
                 self.frames[i] = frame
 
         self.update_frame_list()
