@@ -2096,11 +2096,16 @@ class GIFEditor:
         self.show_frame()
 
     def apply_zoom_effect(self):
-        """Apply a zoom effect to the selected frames."""
+        """
+        Apply a zoom effect to the selected frames.
+        """
         if not self.check_any_frame_selected():
             return
+        
         # Prompt the user for the zoom intensity
         zoom_factor = simpledialog.askfloat("Zoom Effect", "Enter zoom intensity (e.g., 1.2 for 20% zoom in):", minvalue=0.1)
+
+        # Exit the function if the user cancels the dialog or enters an invalid value
         if zoom_factor is None:
             return
 
@@ -2112,16 +2117,34 @@ class GIFEditor:
             if var.get() == 1:
                 frame = self.frames[i]
                 width, height = frame.size
-                new_width = int(width * zoom_factor)
-                new_height = int(height * zoom_factor)
-                zoomed_frame = frame.resize((new_width, new_height), Image.LANCZOS)
+                try:
+                    # Calculate new dimensions
+                    new_width = int(width * zoom_factor)
+                    new_height = int(height * zoom_factor)
 
-                # Center crop the zoomed frame to the original size
-                left = (new_width - width) // 2
-                top = (new_height - height) // 2
-                right = left + width
-                bottom = top + height
-                self.frames[i] = zoomed_frame.crop((left, top, right, bottom))
+                    # Validate that new dimensions do not cause an overflow
+                    if new_width > 2**31-1 or new_height > 2**31-1:
+                        messagebox.showerror("Error", "Zoom factor results in dimensions too large to handle.")
+                        return
+
+                    # Resize the frame with zoom
+                    zoomed_frame = frame.resize((new_width, new_height), Image.LANCZOS)
+
+                    # Center crop the zoomed frame to the original size
+                    left = (new_width - width) // 2
+                    top = (new_height - height) // 2
+                    right = left + width
+                    bottom = top + height
+
+                    # Ensure cropping coordinates are within bounds
+                    if right > new_width or bottom > new_height or left < 0 or top < 0:
+                        messagebox.showerror("Error", "Cropping coordinates out of bounds.")
+                        return
+
+                    self.frames[i] = zoomed_frame.crop((left, top, right, bottom))
+                except Exception as e:
+                    messagebox.showerror("Error", f"An error occurred while applying the zoom effect: {e}")
+                    return
 
         # Update the frame list and show the current frame
         self.update_frame_list()
@@ -2322,12 +2345,25 @@ class GIFEditor:
         return speed_blur_frame
 
     def apply_noise_effect(self):
-        """Apply a noise effect to the selected frames based on user-defined intensity."""
+        """
+        Apply a noise effect to the selected frames based on user-defined intensity.
+        """
         if not self.check_any_frame_selected():
             return
+        
         # Prompt the user for the noise intensity
-        intensity = simpledialog.askinteger("Noise Effect", "Enter noise intensity (e.g., 10 for slight noise, 100 for heavy noise):", minvalue=1)
-        if intensity is None or intensity < 1:
+        intensity = simpledialog.askinteger(
+            "Noise Effect", 
+            "Enter noise intensity (e.g., 10 for slight noise, 100 for heavy noise):", 
+            minvalue=1
+        )
+
+        # Exit the function if the user cancels the dialog
+        if intensity is None:
+            return
+
+        # Validate the noise intensity
+        if intensity < 1:
             messagebox.showerror("Invalid Input", "Please enter a valid positive integer for noise intensity.")
             return
 
@@ -2338,17 +2374,21 @@ class GIFEditor:
             width, height = image.size
             pixels = image.load()
 
-            for _ in range(width * height * intensity // 100):
-                x = random.randint(0, width - 1)
-                y = random.randint(0, height - 1)
-                r, g, b, a = pixels[x, y]
-                noise = random.randint(-intensity, intensity)
-                pixels[x, y] = (
-                    max(0, min(255, r + noise)),
-                    max(0, min(255, g + noise)),
-                    max(0, min(255, b + noise)),
-                    a
-                )
+            try:
+                for _ in range(width * height * intensity // 100):
+                    x = random.randint(0, width - 1)
+                    y = random.randint(0, height - 1)
+                    r, g, b, a = pixels[x, y]
+                    noise = random.randint(-intensity, intensity)
+                    pixels[x, y] = (
+                        max(0, min(255, r + noise)),
+                        max(0, min(255, g + noise)),
+                        max(0, min(255, b + noise)),
+                        a
+                    )
+            except Exception as e:
+                messagebox.showerror("Error", f"An error occurred while adding noise: {e}")
+                return image
 
             return image
 
