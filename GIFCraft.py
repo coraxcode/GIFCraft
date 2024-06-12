@@ -1046,32 +1046,70 @@ class GIFEditor:
         self.show_frame()
 
     def add_empty_frame(self):
-        """Add an empty frame with full transparency. If there are no frames, prompt for the size of the new frame."""
+        """
+        Add an empty frame with full transparency or a specified color. If there are no frames, prompt for the size of the new frame.
+        """
+        
+        # Define maximum width and height limits
+        MAX_WIDTH = 2560
+        MAX_HEIGHT = 1600
+
+        # Check if there are existing frames
         if not self.frames:
-            width = simpledialog.askinteger("Frame Size", "Enter frame width:", minvalue=1)
-            height = simpledialog.askinteger("Frame Size", "Enter frame height:", minvalue=1)
-            if not width or not height:
-                messagebox.showerror("Invalid Input", "Width and height must be positive integers.")
+            # Prompt the user for frame dimensions if no frames exist
+            dimensions = simpledialog.askstring("Frame Size", "Enter frame size (WidthxHeight):")
+
+            # Exit the function if user cancels the dialog
+            if dimensions is None:
                 return
+
+            try:
+                width, height = map(int, dimensions.lower().split('x'))
+            except ValueError:
+                messagebox.showerror("Invalid Input", "Please enter dimensions in WIDTHxHEIGHT format.")
+                return
+
+            # Validate the dimensions entered by the user
+            if width <= 0 or height <= 0 or width > MAX_WIDTH or height > MAX_HEIGHT:
+                messagebox.showerror("Invalid Input", f"Width must be between 1 and {MAX_WIDTH}, "
+                                                      f"and height must be between 1 and {MAX_HEIGHT}.")
+                return
+
             frame_size = (width, height)
         else:
+            # Use the size of the first frame if frames already exist
             frame_size = self.frames[0].size
 
-        self.save_state()
+        # Prompt the user for the frame color in hexadecimal format
+        color = simpledialog.askstring("Frame Color", "Enter frame color in HEX (e.g., #RRGGBBAA) or leave empty for transparency:")
+
+        # Default to transparent if no color is provided
+        if not color:
+            color = (0, 0, 0, 0)  # Fully transparent
 
         try:
-            # Create a new frame with full transparency
-            new_frame = Image.new("RGBA", frame_size, (0, 0, 0, 0))
+            # Create the new frame with the specified or default color
+            new_frame = Image.new("RGBA", frame_size, color)
         except Exception as e:
+            # Handle potential errors during frame creation
             messagebox.showerror("Error", f"Failed to create a new frame: {e}")
             return
 
+        # Save the current state before making changes
+        self.save_state()
+
+        # Append the new frame to the list of frames
         self.frames.append(new_frame)
+        
+        # Append a default delay for the new frame
         self.delays.append(100)
+
+        # Create and trace a new IntVar for the checkbox corresponding to the new frame
         var = IntVar()
         var.trace_add('write', lambda *args, i=len(self.checkbox_vars): self.set_current_frame(i))
         self.checkbox_vars.append(var)
 
+        # Update the UI components related to frames
         self.update_frame_list()
         self.show_frame()
 
@@ -2168,13 +2206,24 @@ class GIFEditor:
         zoom_window.mainloop()
 
     def apply_blur_effect(self):
-        """Apply blur effect to selected frames with user-defined intensity."""
+        """
+        Apply blur effect to selected frames with user-defined intensity.
+        """
         if not self.check_any_frame_selected():
             return
+
+        # Define maximum blur intensity limit
+        MAX_BLUR_INTENSITY = 100
+
         # Prompt user for blur intensity
-        blur_intensity = simpledialog.askinteger("Blur Effect", "Enter blur intensity (e.g., 2 for slight blur):", minvalue=0)
-        if blur_intensity is None or blur_intensity < 0:
-            messagebox.showerror("Invalid Input", "Please enter a valid positive integer for blur intensity.")
+        blur_intensity = simpledialog.askinteger("Blur Effect", "Enter blur intensity (0-100):", minvalue=0, maxvalue=MAX_BLUR_INTENSITY)
+
+        # Exit the function if user cancels the dialog or enters invalid values
+        if blur_intensity is None:
+            return
+
+        if blur_intensity < 0 or blur_intensity > MAX_BLUR_INTENSITY:
+            messagebox.showerror("Invalid Input", f"Please enter a valid blur intensity between 0 and {MAX_BLUR_INTENSITY}.")
             return
 
         self.save_state()  # Save the state before making changes
@@ -2313,12 +2362,20 @@ class GIFEditor:
         self.show_frame()
 
     def apply_pixelate_effect(self):
-        """Apply pixelate effect to selected frames with user-defined intensity."""
+        """
+        Apply pixelate effect to selected frames with user-defined intensity.
+        """
         if not self.check_any_frame_selected():
             return
+
         # Prompt user for pixelation intensity
         pixel_size = simpledialog.askinteger("Pixelate Effect", "Enter pixel size (e.g., 10 for blocky effect):", minvalue=1)
-        if pixel_size is None or pixel_size < 1:
+        
+        # Exit the function if user cancels the dialog or enters invalid values
+        if pixel_size is None:
+            return
+
+        if pixel_size < 1:
             messagebox.showerror("Invalid Input", "Please enter a valid positive integer for pixel size.")
             return
 
@@ -2329,10 +2386,20 @@ class GIFEditor:
             if var.get() == 1:
                 frame = self.frames[i]
                 width, height = frame.size
-                # Resize down to pixel size and back up to original size
-                small_frame = frame.resize((width // pixel_size, height // pixel_size), Image.NEAREST)
-                pixelated_frame = small_frame.resize(frame.size, Image.NEAREST)
-                self.frames[i] = pixelated_frame
+
+                # Validate that the pixel size is not too large for the image dimensions
+                if pixel_size > width or pixel_size > height:
+                    messagebox.showerror("Invalid Input", "Pixel size too large for the image dimensions.")
+                    return
+
+                try:
+                    # Resize down to pixel size and back up to original size
+                    small_frame = frame.resize((max(width // pixel_size, 1), max(height // pixel_size, 1)), Image.NEAREST)
+                    pixelated_frame = small_frame.resize(frame.size, Image.NEAREST)
+                    self.frames[i] = pixelated_frame
+                except Exception as e:
+                    messagebox.showerror("Error", f"An error occurred while applying the pixelate effect: {e}")
+                    return
 
         self.update_frame_list()
         self.show_frame()
