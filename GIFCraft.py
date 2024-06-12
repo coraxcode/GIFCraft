@@ -686,6 +686,11 @@ class GIFEditor:
 
         self.save_state()
 
+        # Remove traces before moving
+        for var in self.checkbox_vars:
+            if var.trace_info():
+                var.trace_remove('write', var.trace_info()[0][1])
+
         selected_frames = [self.frames[i] for i in selected_indices]
         selected_delays = [self.delays[i] for i in selected_indices]
 
@@ -702,6 +707,10 @@ class GIFEditor:
             var.trace_add('write', lambda *args, i=insert_position: self.set_current_frame(i))
             self.checkbox_vars.insert(insert_position, var)
 
+        # Re-add traces after moving
+        for i, var in enumerate(self.checkbox_vars):
+            var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
+
         self.update_frame_list()
         self.show_frame()
 
@@ -715,18 +724,31 @@ class GIFEditor:
             messagebox.showinfo("Info", "No frames selected for merging.")
             return
 
+        # Remove traces before merging
+        for var in self.checkbox_vars:
+            if var.trace_info():
+                var.trace_remove('write', var.trace_info()[0][1])
+
+        # Merge frames
         base_frame = self.frames[checked_indices[-1]].copy()
         for index in reversed(checked_indices[:-1]):
             frame = self.frames[index]
             base_frame = Image.alpha_composite(base_frame, frame)
 
+        # Update the frames and checkbox_vars lists
         self.frames[checked_indices[-1]] = base_frame
         for index in reversed(checked_indices[:-1]):
             del self.frames[index]
             del self.delays[index]
             del self.checkbox_vars[index]
 
-        self.frame_index = checked_indices[-1]
+        # Adjust frame index
+        self.frame_index = min(checked_indices[-1], len(self.frames) - 1)
+
+        # Re-add traces after merging
+        for i, var in enumerate(self.checkbox_vars):
+            var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
+
         self.update_frame_list()
         self.show_frame()
         messagebox.showinfo("Success", "Frames merged successfully!")
@@ -1214,14 +1236,23 @@ class GIFEditor:
             messagebox.showerror("Invalid Input", "Please enter 1 for odd frames or 2 for even frames.")
             return
 
+        # Remove traces before marking
         for var in self.checkbox_vars:
-            var.set(0)
+            if var.trace_info():
+                var.trace_remove('write', var.trace_info()[0][1])
 
+        # Mark the appropriate checkboxes
         for i, var in enumerate(self.checkbox_vars):
-            if choice == 1 and i % 2 == 0:
+            if (choice == 1 and i % 2 == 0) or (choice == 2 and i % 2 != 0):
                 var.set(1)
-            elif choice == 2 and i % 2 != 0:
-                var.set(1)
+            else:
+                var.set(0)
+
+        # Re-add traces after marking
+        for i, var in enumerate(self.checkbox_vars):
+            var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
+
+        self.update_frame_list()
 
     def mark_frames_relative_to_cursor(self):
         """Mark all frames that are below or above the cursor in the frame list based on user input."""
@@ -1231,12 +1262,22 @@ class GIFEditor:
             messagebox.showerror("Invalid Input", "Please enter 'up' or 'down'.")
             return
 
+        # Remove traces before marking
+        for var in self.checkbox_vars:
+            if var.trace_info():
+                var.trace_remove('write', var.trace_info()[0][1])
+
+        # Mark the appropriate checkboxes
         if direction == "up":
             for i in range(self.frame_index + 1):
                 self.checkbox_vars[i].set(1)
         elif direction == "down":
             for i in range(self.frame_index, len(self.checkbox_vars)):
                 self.checkbox_vars[i].set(1)
+
+        # Re-add traces after marking
+        for i, var in enumerate(self.checkbox_vars):
+            var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
 
         self.update_frame_list()
 
