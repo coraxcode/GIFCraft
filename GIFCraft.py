@@ -995,6 +995,10 @@ class GIFEditor:
 
     def apply_overlay_frame(self):
         """Apply an overlay frame (watermark or border) to the selected frames with user-defined transparency."""
+        if not self.frames:
+            messagebox.showerror("Error", "No frames available to apply the overlay.")
+            return
+
         overlay_file = filedialog.askopenfilename(filetypes=[("Image files", "*.png *.jpg *.jpeg *.gif")])
         if not overlay_file:
             return
