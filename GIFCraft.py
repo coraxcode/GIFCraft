@@ -397,46 +397,55 @@ class GIFEditor:
 
     def save_to_file(self, file_path):
         """Save the frames and delays to the specified file in the given format."""
-        if self.frames:
-            try:
-                _, ext = os.path.splitext(file_path)
-                ext = ext[1:].lower()  # Remove the dot and convert to lowercase
+        if not self.frames:
+            messagebox.showerror("Error", "No frames to save.")
+            return
 
-                # Prompt for loop option and count
-                loop_option = messagebox.askyesno("Loop Option", "Do you want the animation to loop?")
-                if loop_option:
-                    loop_count = simpledialog.askinteger("Loop Count", "Enter the number of loops (0 for infinite):", minvalue=0)
-                else:
-                    loop_count = 1
+        try:
+            _, ext = os.path.splitext(file_path)
+            ext = ext[1:].lower()  # Remove the dot and convert to lowercase
 
-                if ext == 'gif':
-                    dispose_option = messagebox.askyesno("GIF Disposal Option", "Do you want to enable disposal for the GIF frames?")
-                    disposal = 2 if dispose_option else 0
-                    self.frames[0].save(
-                        file_path, save_all=True, append_images=self.frames[1:], 
-                        duration=self.delays, loop=loop_count, disposal=disposal
-                    )
-                elif ext == 'png':
-                    # APNG does not have a built-in disposal setting, but it supports looping
-                    self.frames[0].save(
-                        file_path, save_all=True, append_images=self.frames[1:], 
-                        duration=self.delays, loop=loop_count, format='PNG'
-                    )
-                elif ext == 'webp':
-                    # WebP does not have a built-in disposal setting, but it supports looping
-                    self.frames[0].save(
-                        file_path, save_all=True, append_images=self.frames[1:], 
-                        duration=self.delays, loop=loop_count, format='WEBP'
-                    )
-                else:
-                    messagebox.showerror("Error", f"Unsupported file format: {ext.upper()}")
-                    return
+            # Prompt for loop option and count
+            loop_option = messagebox.askyesno("Loop Option", "Do you want the animation to loop?")
+            if loop_option:
+                loop_count = simpledialog.askinteger(
+                    "Loop Count", "Enter the number of loops (0 for infinite):", minvalue=0
+                )
+                if loop_count is None:
+                    return  # User canceled the input dialog
+            else:
+                loop_count = 0  # No looping
 
-                self.current_file = file_path
-                self.update_title()
-                messagebox.showinfo("Success", f"{ext.upper()} saved successfully!")
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to save {ext.upper()}: {e}")
+            if ext == 'gif':
+                dispose_option = messagebox.askyesno("GIF Disposal Option", "Do you want to enable disposal for the GIF frames?")
+                disposal = 2 if dispose_option else 0
+                # Adjust loop count for GIFs: 0 for infinite, 1 for one loop, etc.
+                gif_loop_count = 0 if loop_count == 0 else loop_count
+                self.frames[0].save(
+                    file_path, save_all=True, append_images=self.frames[1:], 
+                    duration=self.delays, loop=gif_loop_count, disposal=disposal
+                )
+            elif ext == 'png':
+                # APNG supports looping directly
+                self.frames[0].save(
+                    file_path, save_all=True, append_images=self.frames[1:], 
+                    duration=self.delays, loop=loop_count, format='PNG'
+                )
+            elif ext == 'webp':
+                # WebP supports looping directly
+                self.frames[0].save(
+                    file_path, save_all=True, append_images=self.frames[1:], 
+                    duration=self.delays, loop=loop_count, format='WEBP'
+                )
+            else:
+                messagebox.showerror("Error", f"Unsupported file format: {ext.upper()}")
+                return
+
+            self.current_file = file_path
+            self.update_title()
+            messagebox.showinfo("Success", f"{ext.upper()} saved successfully!")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save {ext.upper()}: {e}")
 
     def exit_closing(self):
         """Prompt the user to save changes before closing the window."""
