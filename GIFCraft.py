@@ -1084,13 +1084,29 @@ class GIFEditor:
             messagebox.showinfo("Info", "No frames selected for deletion.")
             return
 
-        for index in reversed(indices_to_delete):
+        # Remove traces before deleting
+        for var in self.checkbox_vars:
+            if var.trace_info():
+                var.trace_remove('write', var.trace_info()[0][1])
+
+        # Sort indices in reverse order to delete from end to start
+        indices_to_delete.sort(reverse=True)
+
+        for index in indices_to_delete:
             del self.frames[index]
             del self.delays[index]
             del self.checkbox_vars[index]
 
+        # Adjust frame index
         if self.frame_index >= len(self.frames):
             self.frame_index = max(0, len(self.frames) - 1)
+        else:
+            num_deleted_before = sum(i < self.frame_index for i in indices_to_delete)
+            self.frame_index -= num_deleted_before
+
+        # Re-add traces after deletion
+        for i, var in enumerate(self.checkbox_vars):
+            var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
 
         self.update_frame_list()
         self.show_frame()
