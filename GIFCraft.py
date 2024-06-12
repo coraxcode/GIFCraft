@@ -270,13 +270,54 @@ class GIFEditor:
         file_path = filedialog.asksaveasfilename(defaultextension=".gif", filetypes=[("GIF files", "*.gif")])
         if file_path:
             try:
-                images = [frame.convert("RGB").quantize(method=0) for frame in self.frames]
-                images[0].save(file_path, save_all=True, append_images=images[1:], duration=self.delays, loop=0, dither=Image.NONE)
+                # Prompt for loop option and count
+                loop_option = messagebox.askyesno("Loop Option", "Do you want the animation to loop?")
+                if loop_option:
+                    loop_count = simpledialog.askinteger(
+                        "Loop Count", "Enter the number of loops (0 for infinite):", minvalue=0
+                    )
+                    if loop_count is None:
+                        return  # User canceled the input dialog
+                else:
+                    loop_count = 1  # Play once, no looping
+
+                dispose_option = messagebox.askyesno("GIF Disposal Option", "Do you want to enable disposal for the GIF frames?")
+                disposal = 2 if dispose_option else 0
+
+                # Adjust loop count for GIFs: 0 for infinite, 1 for one loop, 2 for two loops, etc.
+                if loop_count == 1:
+                    gif_loop_count = 1  # Play once
+                else:
+                    gif_loop_count = 0 if loop_count == 0 else loop_count - 1
+
+                # Convert frames to high quality with transparency and dithering
+                images = []
+                for frame in self.frames:
+                    # Convert to RGBA and handle transparency
+                    frame = frame.convert("RGBA")
+                    alpha = frame.split()[3]
+
+                    # Create a new background image with white background
+                    background = Image.new("RGBA", frame.size, (255, 255, 255, 255))
+                    background.paste(frame, mask=alpha)
+
+                    # Quantize with palette and dithering
+                    image = background.convert("P", palette=Image.ADAPTIVE, dither=Image.FLOYDSTEINBERG)
+
+                    # Preserve transparency
+                    image.info['transparency'] = image.getpixel((0, 0))
+                    images.append(image)
+
+                images[0].save(
+                    file_path, save_all=True, append_images=images[1:], 
+                    duration=self.delays, loop=gif_loop_count, disposal=disposal
+                )
                 self.current_file = file_path
                 self.update_title()
                 messagebox.showinfo("Success", "High-quality GIF saved successfully!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save high-quality GIF: {e}")
+
 
     def extract_video_frames(self):
         """Extract frames from a video file and save them as images with progress tracking and cancel option."""
