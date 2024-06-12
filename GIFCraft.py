@@ -1125,12 +1125,23 @@ class GIFEditor:
             messagebox.showinfo("Info", "No frames are checked to keep.")
             return
 
+        # Remove traces before deleting unchecked frames
+        for var in self.checkbox_vars:
+            if var.trace_info():
+                var.trace_remove('write', var.trace_info()[0][1])
+
+        # Keep only the checked frames
         self.frames = [self.frames[i] for i in indices_to_keep]
         self.delays = [self.delays[i] for i in indices_to_keep]
         self.checkbox_vars = [self.checkbox_vars[i] for i in indices_to_keep]
 
+        # Adjust frame index
         if self.frame_index >= len(self.frames):
             self.frame_index = max(0, len(self.frames) - 1)
+
+        # Re-add traces after deletion
+        for i, var in enumerate(self.checkbox_vars):
+            var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
 
         self.update_frame_list()
         self.show_frame()
