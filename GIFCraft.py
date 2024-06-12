@@ -45,6 +45,9 @@ class GIFEditor:
         self.setup_ui()
         self.bind_keyboard_events()
 
+        # Bind close window event
+        self.master.protocol("WM_DELETE_WINDOW", self.exit_closing)
+
     def update_title(self):
         """Update the window title to reflect the current file state."""
         if self.frames:
@@ -83,7 +86,7 @@ class GIFEditor:
         file_menu.add_command(label="Extract Video Frames", command=self.extract_video_frames)
         file_menu.add_command(label="Extract Frames Gif", command=self.extract_frames_gif)
         file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self.master.quit)
+        file_menu.add_command(label="Exit", command=self.exit_closing)
         self.menu_bar.add_cascade(label="File", menu=file_menu)
 
     def create_edit_menu(self):
@@ -412,6 +415,18 @@ class GIFEditor:
                 messagebox.showinfo("Success", f"{ext.upper()} saved successfully!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save {ext.upper()}: {e}")
+
+    def exit_closing(self):
+        """Prompt the user to save changes before closing the window."""
+        if self.frames:
+            response = messagebox.askyesnocancel("Unsaved Changes", "Do you want to save the current file before exiting?")
+            if response:  # Yes
+                self.save()
+                if self.frames:  # If saving was cancelled or failed, do not proceed
+                    return
+            elif response is None:  # Cancel
+                return
+        self.master.destroy()
 
 # MENU EDIT
 
@@ -2934,8 +2949,7 @@ class GIFEditor:
         return image.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
 
-def main():
-    """Main function to initialize the GIF editor."""
+if __name__ == "__main__":
     root = tk.Tk()
     app = GIFEditor(master=root)
     try:
@@ -2943,7 +2957,3 @@ def main():
     except KeyboardInterrupt:
         print("Program interrupted with Ctrl+C")
         root.destroy()
-
-
-if __name__ == "__main__":
-    main()
