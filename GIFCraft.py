@@ -2678,19 +2678,36 @@ class GIFEditor:
                 if self.tool == 'brush':
                     self.draw_brush(draw, self.last_x, self.last_y, x, y)
                 elif self.tool == 'eraser':
-                    draw.line([self.last_x, self.last_y, x, y], fill=(255, 255, 255, 0), width=self.brush_size)
+                    self.draw_eraser(draw, self.last_x, self.last_y, x, y)
                 self.frames[self.frame_index] = frame
                 self.last_x, self.last_y = x, y
                 self.show_frame_with_overlay()
 
     def draw_brush(self, draw, x1, y1, x2, y2):
-        """Draw a smooth, round brush stroke."""
+        """Draw a smooth, round brush stroke using anti-aliasing."""
+        from PIL import ImageFilter
+
         distance = ((x2 - x1)**2 + (y2 - y1)**2)**0.5
         num_steps = int(distance / self.brush_size) + 1
         for i in range(num_steps):
             x = x1 + i * (x2 - x1) / num_steps
             y = y1 + i * (y2 - y1) / num_steps
-            draw.ellipse([x - self.brush_size / 2, y - self.brush_size / 2, x + self.brush_size / 2, y + self.brush_size / 2], fill=self.brush_color, outline=self.brush_color)
+            draw.ellipse([x - self.brush_size / 2, y - self.brush_size / 2, x + self.brush_size / 2, y + self.brush_size / 2], fill=self.brush_color)
+
+        # Smooth the brush stroke by applying a Gaussian blur filter
+        self.frames[self.frame_index] = self.frames[self.frame_index].filter(ImageFilter.GaussianBlur(radius=self.brush_size / 4))
+
+    def draw_eraser(self, draw, x1, y1, x2, y2):
+        """Draw a smooth, round eraser stroke using anti-aliasing."""
+        distance = ((x2 - x1)**2 + (y2 - y1)**2)**0.5
+        num_steps = int(distance / self.brush_size) + 1
+        for i in range(num_steps):
+            x = x1 + i * (x2 - x1) / num_steps
+            y = y1 + i * (y2 - y1) / num_steps
+            draw.ellipse([x - self.brush_size / 2, y - self.brush_size / 2, x + self.brush_size / 2, y + self.brush_size / 2], fill=(255, 255, 255, 0))
+
+        # Smooth the eraser stroke by applying a Gaussian blur filter
+        self.frames[self.frame_index] = self.frames[self.frame_index].filter(ImageFilter.GaussianBlur(radius=self.brush_size / 4))
 
     def scale_coordinates(self, x, y):
         """Scale the coordinates based on the current preview resolution."""
