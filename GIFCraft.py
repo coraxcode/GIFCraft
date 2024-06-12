@@ -1,14 +1,15 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk, colorchooser
 from tkinter import Menu, Checkbutton, IntVar, Scrollbar, Frame, Canvas
-from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageSequence, ImageOps, ImageEnhance, ImageFilter, ImageChops, ImageColor
+from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageSequence, ImageEnhance, ImageFilter, ImageColor, ImageOps
 import os
 import random
 import platform
-import numpy as np
 import threading
+import numpy as np
 import time
 import cv2
+
 
 class GIFEditor:
     def __init__(self, master):
@@ -108,14 +109,14 @@ class GIFEditor:
         frames_menu = Menu(self.menu_bar, tearoff=0)
         frames_menu.add_command(label="Next frame", command=self.next_frame, accelerator="Arrow Right")
         frames_menu.add_command(label="Previous frame", command=self.previous_frame, accelerator="Arrow Left")
-        frames_menu.add_separator() 
+        frames_menu.add_separator()
         frames_menu.add_command(label="Go to Beginning", command=self.go_to_beginning, accelerator="Ctrl+Arrow Right")
         frames_menu.add_command(label="Go to end", command=self.go_to_end, accelerator="Ctrl+Arrow Left")
-        frames_menu.add_separator() 
+        frames_menu.add_separator()
         frames_menu.add_command(label="Move Frame Up", command=self.move_frame_up, accelerator="Arrow Up")
         frames_menu.add_command(label="Move Frame Down", command=self.move_frame_down, accelerator="Arrow Down")
         frames_menu.add_command(label="Move Selected Frames", command=self.prompt_and_move_selected_frames)
-        frames_menu.add_separator()   
+        frames_menu.add_separator()
         frames_menu.add_command(label="Merge Selected Frames", command=self.merge_frames, accelerator="M")
         frames_menu.add_separator()
         frames_menu.add_command(label="Add Image", command=self.add_image, accelerator="Ctrl+I")
@@ -276,22 +277,18 @@ class GIFEditor:
 
     def extract_video_frames(self):
         """Extract frames from a video file and save them as images with progress tracking and cancel option."""
-        # Ask the user to select a video file
         file_path = filedialog.askopenfilename(filetypes=[("Video files", "*.mp4 *.avi *.mkv")])
         if not file_path:
             return
 
-        # Ask the user to select a directory to save the frames
         output_dir = filedialog.askdirectory()
         if not output_dir:
             return
 
-        # Ask the user whether to extract all frames or from a certain time range
         extract_all = messagebox.askyesno("Extract All Frames", "Do you want to extract all frames from the video?")
         start_time_seconds, end_time_seconds = None, None
 
         if not extract_all:
-            # Ask for the start and end times
             start_time_str = simpledialog.askstring("Start Time", "Enter start time (HH:MM:SS):")
             end_time_str = simpledialog.askstring("End Time", "Enter end time (HH:MM:SS):")
 
@@ -324,7 +321,6 @@ class GIFEditor:
                 frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
                 extracted_frames = 0
 
-                # Calculate frame range
                 start_frame = int(start_time_seconds * fps) if start_time_seconds is not None else 0
                 end_frame = int(end_time_seconds * fps) if end_time_seconds is not None else frame_count
 
@@ -456,12 +452,10 @@ class GIFEditor:
 
     def paste_frames(self, event=None):
         """Paste the copied frames below the selected frames with all checkboxes checked."""
-        # Check if there are any frames copied
         if not hasattr(self, 'copied_frames') or not self.copied_frames:
             messagebox.showerror("Error", "No frames to paste. Please copy frames first.")
             return
 
-        # Get the selected indices
         selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
         if not selected_indices:
             messagebox.showinfo("Info", "No frames selected to paste after. Pasting at the end.")
@@ -469,25 +463,24 @@ class GIFEditor:
         else:
             insert_index = max(selected_indices) + 1
 
-        # Save the current state for undo functionality
         self.save_state()
 
-        # Insert the copied frames and delays at the specified index
         for frame, delay in self.copied_frames:
             self.frames.insert(insert_index, frame)
             self.delays.insert(insert_index, delay)
-            var = IntVar(value=1)  # Set the checkbox to be checked by default
+            var = IntVar(value=1)
             var.trace_add('write', lambda *args, i=insert_index: self.set_current_frame(i))
             self.checkbox_vars.insert(insert_index, var)
             insert_index += 1
 
-        # Update the frame list and display the current frame
         self.update_frame_list()
         self.show_frame()
 
+# MENU FRAMES
+
     def rotate_selected_frames_180(self):
         """Rotate the selected frames 180 degrees."""
-        self.save_state()  # Save the state before making changes
+        self.save_state()
         if not self.check_any_frame_selected():
             return
         for i, frame in enumerate(self.frames):
@@ -495,10 +488,10 @@ class GIFEditor:
                 self.frames[i] = frame.rotate(180)
         self.update_frame_list()
         self.show_frame()
-    
+
     def rotate_selected_frames_90_cw(self):
         """Rotate the selected frames 90 degrees clockwise."""
-        self.save_state()  # Save the state before making changes
+        self.save_state()
         if not self.check_any_frame_selected():
             return
         for i, frame in enumerate(self.frames):
@@ -509,7 +502,7 @@ class GIFEditor:
 
     def rotate_selected_frames_90_ccw(self):
         """Rotate the selected frames 90 degrees counterclockwise."""
-        self.save_state()  # Save the state before making changes
+        self.save_state()
         if not self.check_any_frame_selected():
             return
         for i, frame in enumerate(self.frames):
@@ -520,15 +513,15 @@ class GIFEditor:
 
     def rotate_selected_frames(self):
         """Rotate the selected frames by a user-specified number of degrees."""
-        self.save_state()  # Save the state before making changes
+        self.save_state()
         if not self.check_any_frame_selected():
             return
         try:
             angle = simpledialog.askfloat("Rotate Frames", "Enter the rotation angle in degrees:", parent=self.master)
-            if angle is None:  # User canceled the dialog
+            if angle is None:
                 return
 
-            self.save_state()  # Save the state before making changes
+            self.save_state()
 
             for i, frame in enumerate(self.frames):
                 if self.checkbox_vars[i].get() == 1:
@@ -542,7 +535,7 @@ class GIFEditor:
 
     def flip_selected_frames_horizontal(self):
         """Flip the selected frames horizontally."""
-        self.save_state()  # Save the state before making changes
+        self.save_state()
         if not self.check_any_frame_selected():
             return
         for i, frame in enumerate(self.frames):
@@ -553,7 +546,7 @@ class GIFEditor:
 
     def flip_selected_frames_vertical(self):
         """Flip the selected frames vertically."""
-        self.save_state()  # Save the state before making changes
+        self.save_state()
         if not self.check_any_frame_selected():
             return
         for i, frame in enumerate(self.frames):
@@ -561,8 +554,6 @@ class GIFEditor:
                 self.frames[i] = frame.transpose(Image.FLIP_TOP_BOTTOM)
         self.update_frame_list()
         self.show_frame()
-
-# MENU FRAMES
 
     def next_frame(self, event=None):
         """Show the next frame without altering the scrollbar position."""
@@ -604,17 +595,14 @@ class GIFEditor:
             messagebox.showinfo("Move Up", "The selected frame is already at the top.")
             return
 
-        self.save_state()  # Save the state before making changes
+        self.save_state()
 
-        # Swap the frames and delays
         self.frames[selected_index], self.frames[selected_index - 1] = self.frames[selected_index - 1], self.frames[selected_index]
         self.delays[selected_index], self.delays[selected_index - 1] = self.delays[selected_index - 1], self.delays[selected_index]
 
-        # Move the check state
         self.checkbox_vars[selected_index].set(0)
         self.checkbox_vars[selected_index - 1].set(1)
 
-        # Update the frame index to the new position of the moved frame
         self.frame_index = selected_index - 1
 
         self.update_frame_list()
@@ -634,17 +622,14 @@ class GIFEditor:
             messagebox.showinfo("Move Down", "The selected frame is already at the bottom.")
             return
 
-        self.save_state()  # Save the state before making changes
+        self.save_state()
 
-        # Swap the frames and delays
         self.frames[selected_index], self.frames[selected_index + 1] = self.frames[selected_index + 1], self.frames[selected_index]
         self.delays[selected_index], self.delays[selected_index + 1] = self.delays[selected_index + 1], self.delays[selected_index]
 
-        # Move the check state
         self.checkbox_vars[selected_index].set(0)
         self.checkbox_vars[selected_index + 1].set(1)
 
-        # Update the frame index to the new position of the moved frame
         self.frame_index = selected_index + 1
 
         self.update_frame_list()
@@ -684,24 +669,21 @@ class GIFEditor:
             messagebox.showinfo("Info", "No frames selected to move.")
             return
 
-        self.save_state()  # Save the state before making changes
+        self.save_state()
 
-        # Get the selected frames and their delays
         selected_frames = [self.frames[i] for i in selected_indices]
         selected_delays = [self.delays[i] for i in selected_indices]
 
-        # Remove selected frames from their original positions
         for index in reversed(selected_indices):
             del self.frames[index]
             del self.delays[index]
             del self.checkbox_vars[index]
 
-        # Insert selected frames at the target position
         for i, (frame, delay) in enumerate(zip(selected_frames, selected_delays)):
             insert_position = target_position + i
             self.frames.insert(insert_position, frame)
             self.delays.insert(insert_position, delay)
-            var = IntVar(value=1)  # Check the checkbox for the moved frames
+            var = IntVar(value=1)
             var.trace_add('write', lambda *args, i=insert_position: self.set_current_frame(i))
             self.checkbox_vars.insert(insert_position, var)
 
@@ -710,24 +692,20 @@ class GIFEditor:
 
     def merge_frames(self, event=None):
         """Merge the checked frames from top to bottom respecting transparency."""
-        self.save_state()  # Save the state before making changes
+        self.save_state()
 
-        # Find the indices of the checked frames
         checked_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
 
         if not checked_indices:
             messagebox.showinfo("Info", "No frames selected for merging.")
             return
 
-        # Merge the frames from bottom to top
         base_frame = self.frames[checked_indices[-1]].copy()
         for index in reversed(checked_indices[:-1]):
             frame = self.frames[index]
             base_frame = Image.alpha_composite(base_frame, frame)
 
-        # Replace the last checked frame with the merged frame
         self.frames[checked_indices[-1]] = base_frame
-        # Remove the other checked frames
         for index in reversed(checked_indices[:-1]):
             del self.frames[index]
             del self.delays[index]
@@ -744,16 +722,15 @@ class GIFEditor:
         if not file_paths:
             return
 
-        self.save_state()  # Save the state before making changes
+        self.save_state()
         try:
             for file_path in file_paths:
                 with Image.open(file_path) as image:
-                    # Resize the new image to match the base dimensions
-                    if not self.frames:  # If no frames, set the base size to the first image's size
+                    if not self.frames:
                         self.base_size = image.size
                     image = self.resize_to_base_size(image.copy())
                     self.frames.append(image)
-                self.delays.append(100)  # Default delay for added images
+                self.delays.append(100)
                 var = IntVar()
                 var.trace_add('write', lambda *args, i=len(self.checkbox_vars): self.set_current_frame(i))
                 self.checkbox_vars.append(var)
@@ -765,8 +742,6 @@ class GIFEditor:
 
     def add_text_frame(self):
         """Create a frame with text using user inputs for font, size, color, outline, and position."""
-        
-        # Ensure there are frames to use as a reference for mouse positioning
         if len(self.frames) < 1:
             messagebox.showerror("Error", "There are no frames available to use as a reference.")
             return
@@ -778,7 +753,7 @@ class GIFEditor:
                 windir = os.environ.get('WINDIR')
                 if windir:
                     font_dirs = [os.path.join(windir, 'Fonts')]
-            elif platform.system() == "Darwin":  # macOS
+            elif platform.system() == "Darwin":
                 font_dirs = ["/Library/Fonts", "~/Library/Fonts"]
             elif platform.system() == "Linux":
                 font_dirs = ["/usr/share/fonts", "~/.local/share/fonts", "~/.fonts"]
@@ -811,20 +786,16 @@ class GIFEditor:
             messagebox.showerror("Error", "No fonts found on the system.")
             return
 
-        # Create a new window for text input
         top = tk.Toplevel(self.master)
         top.title("Add Text to Frame")
 
-        # Preview font label
         font_preview_label = tk.Label(top, text="Sample Text", font=(default_font, 14))
         font_preview_label.grid(row=0, column=0, columnspan=3, padx=10, pady=10, sticky="n")
 
-        # Entry for text
         tk.Label(top, text="Enter text to display:").grid(row=1, column=0, padx=10, pady=5)
         text_entry = tk.Entry(top, width=30)
         text_entry.grid(row=1, column=1, padx=10, pady=5)
 
-        # Font selection with preview
         tk.Label(top, text="Choose Font:").grid(row=2, column=0, padx=10, pady=5)
         font_combobox = ttk.Combobox(top, values=font_names, width=28)
         font_combobox.set(default_font)
@@ -844,24 +815,22 @@ class GIFEditor:
 
         font_combobox.bind("<<ComboboxSelected>>", update_font_preview)
 
-        # Font size
         tk.Label(top, text="Enter font size (in pixels):").grid(row=3, column=0, padx=10, pady=5)
         font_size_entry = tk.Entry(top, width=30)
         font_size_entry.grid(row=3, column=1, padx=10, pady=5)
         font_size_entry.insert(0, "20")
 
-        # Bold and Italic checkboxes
         bold_var = tk.BooleanVar()
         italic_var = tk.BooleanVar()
         tk.Checkbutton(top, text="Bold", variable=bold_var).grid(row=4, column=0, padx=10, pady=5)
         tk.Checkbutton(top, text="Italic", variable=italic_var).grid(row=4, column=1, padx=10, pady=5)
 
-        # Text color
         tk.Label(top, text="Choose text color:").grid(row=5, column=0, padx=10, pady=5)
         text_color_button = tk.Button(top, text="Select Color")
         text_color_button.grid(row=5, column=1, padx=10, pady=5)
 
         text_color = "#FFFFFF"
+
         def choose_text_color():
             nonlocal text_color
             color_code = colorchooser.askcolor(title="Choose text color")
@@ -870,12 +839,12 @@ class GIFEditor:
 
         text_color_button.config(command=choose_text_color)
 
-        # Outline color
         tk.Label(top, text="Choose outline color:").grid(row=6, column=0, padx=10, pady=5)
         outline_color_button = tk.Button(top, text="Select Color")
         outline_color_button.grid(row=6, column=1, padx=10, pady=5)
 
         outline_color = "#000000"
+
         def choose_outline_color():
             nonlocal outline_color
             color_code = colorchooser.askcolor(title="Choose outline color")
@@ -884,19 +853,16 @@ class GIFEditor:
 
         outline_color_button.config(command=choose_outline_color)
 
-        # Outline thickness
         tk.Label(top, text="Enter outline thickness (0 to 5):").grid(row=7, column=0, padx=10, pady=5)
         outline_thickness_entry = tk.Entry(top, width=30)
         outline_thickness_entry.grid(row=7, column=1, padx=10, pady=5)
 
-        # Text position
         tk.Label(top, text="Choose text position:").grid(row=8, column=0, padx=10, pady=5)
         position_options = ["Top", "Center", "Bottom", "Mouse"]
         position_combobox = ttk.Combobox(top, values=position_options, width=28)
         position_combobox.set("Center")
         position_combobox.grid(row=8, column=1, padx=10, pady=5)
 
-        # Margin input
         tk.Label(top, text="Enter margin (default is 30):").grid(row=9, column=0, padx=10, pady=5)
         margin_entry = tk.Entry(top, width=30)
         margin_entry.grid(row=9, column=1, padx=10, pady=5)
@@ -930,11 +896,9 @@ class GIFEditor:
             else:
                 font_style = "regular"
 
-            # Create a new transparent frame
             base_size = self.frames[0].size
             new_frame = Image.new("RGBA", base_size, (0, 0, 0, 0))
 
-            # Load the font
             try:
                 font = ImageFont.truetype(font_path, font_size)
             except IOError:
@@ -943,22 +907,18 @@ class GIFEditor:
 
             draw = ImageDraw.Draw(new_frame)
 
-            # Calculate text size and position
             text_bbox = draw.textbbox((0, 0), text, font=font)
             text_width, text_height = text_bbox[2] - text_bbox[0], text_bbox[3] - text_bbox[1]
 
-            # Ensure the text stays within the frame dimensions
             if position_choice == "top":
                 text_position = (max(0, (base_size[0] - text_width) // 2), margin)
             elif position_choice == "center":
                 text_position = (max(0, (base_size[0] - text_width) // 2), max(0, (base_size[1] - text_height) // 2))
             elif position_choice == "bottom":
                 text_position = (max(0, (base_size[0] - text_width) // 2), base_size[1] - text_height - margin)
-                # Ensure the text stays within the frame dimensions
                 if text_position[1] + text_height > base_size[1] - margin:
                     text_position = (text_position[0], base_size[1] - text_height - margin)
             elif position_choice == "mouse":
-                # Use the first frame as reference for mouse positioning
                 ref_frame = self.frames[0].copy()
                 ref_image = ImageTk.PhotoImage(ref_frame)
 
@@ -978,7 +938,6 @@ class GIFEditor:
                 canvas.bind("<Button-1>", on_click)
                 self.master.wait_window(mouse_top)
 
-            # Draw text with outline
             if outline_thickness > 0:
                 for dx in range(-outline_thickness, outline_thickness + 1):
                     for dy in range(-outline_thickness, outline_thickness + 1):
@@ -986,9 +945,8 @@ class GIFEditor:
                             draw.text((text_position[0] + dx, text_position[1] + dy), text, font=font, fill=outline_color)
             draw.text(text_position, text, font=font, fill=text_color)
 
-            # Add the new frame to the frames list at the first position
             self.frames.insert(0, new_frame)
-            self.delays.insert(0, 100)  # Default delay for new frame
+            self.delays.insert(0, 100)
             var = tk.IntVar()
             var.trace_add('write', lambda *args, i=0: self.set_current_frame(i))
             self.checkbox_vars.insert(0, var)
@@ -1026,16 +984,13 @@ class GIFEditor:
         if not overlay_file:
             return
 
-        # Prompt the user for the transparency intensity
         intensity = simpledialog.askfloat("Overlay Frame Transparency", "Enter transparency intensity (0.0 to 1.0):", minvalue=0.0, maxvalue=1.0)
         if intensity is None:
-            return  # User canceled the dialog
+            return
 
-        # Prompt the user whether to distort the overlay image to match the frame size
         distort_overlay = messagebox.askyesno("Distort Overlay", "Do you want to distort the overlay image to match the frame size?")
 
-        self.save_state()  # Save the state before making changes
-
+        self.save_state()
         try:
             overlay_image = Image.open(overlay_file).convert("RGBA")
         except Exception as e:
@@ -1043,14 +998,12 @@ class GIFEditor:
             return
 
         def apply_transparent_overlay(frame, overlay, intensity, distort):
-            """Apply the overlay to the frame using the given intensity, respecting transparency."""
             frame = frame.convert("RGBA")
             overlay = overlay.copy()
-            
+
             if distort:
                 overlay = overlay.resize(frame.size, Image.LANCZOS)
             else:
-                # Center the overlay if not distorting
                 overlay_width, overlay_height = overlay.size
                 frame_width, frame_height = frame.size
                 x_offset = (frame_width - overlay_width) // 2
@@ -1058,15 +1011,13 @@ class GIFEditor:
                 new_overlay = Image.new("RGBA", frame.size, (0, 0, 0, 0))
                 new_overlay.paste(overlay, (x_offset, y_offset))
                 overlay = new_overlay
-            
-            # Extract the alpha channel and apply intensity
+
             alpha = overlay.split()[3]
             alpha = ImageEnhance.Brightness(alpha).enhance(intensity)
             overlay.putalpha(alpha)
-            
+
             return Image.alpha_composite(frame, overlay)
 
-        # Apply the overlay frame to the selected frames
         for i, var in enumerate(self.checkbox_vars):
             if var.get() == 1:
                 frame = self.frames[i].convert("RGBA")
@@ -1078,7 +1029,6 @@ class GIFEditor:
     def add_empty_frame(self):
         """Add an empty frame with an optional background color. If there are no frames, prompt for the size of the new frame."""
         if not self.frames:
-            # Prompt the user for the width and height if no frames exist
             width = simpledialog.askinteger("Frame Size", "Enter frame width:", minvalue=1)
             height = simpledialog.askinteger("Frame Size", "Enter frame height:", minvalue=1)
             if not width or not height:
@@ -1086,19 +1036,14 @@ class GIFEditor:
                 return
             frame_size = (width, height)
 
-            # Prompt the user for the background color in hexadecimal format
             color_code = simpledialog.askstring("Add Empty Frame", "Enter background color (hex code, e.g., #FFFFFF for white):")
         else:
-            # Use the size of the existing frames
             frame_size = self.frames[0].size
 
-            # Prompt the user for the background color in hexadecimal format
             color_code = simpledialog.askstring("Add Empty Frame", "Enter background color (hex code, e.g., #FFFFFF for white):")
 
-        # Validate and set the color, default to transparent if invalid
         if color_code and len(color_code) == 7 and color_code[0] == '#':
             try:
-                # Test the color code by creating a single pixel image
                 Image.new("RGBA", (1, 1), color_code).verify()
             except ValueError:
                 messagebox.showerror("Invalid Color", "The entered color code is invalid. Using transparent background instead.")
@@ -1106,18 +1051,16 @@ class GIFEditor:
         else:
             color_code = None
 
-        self.save_state()  # Save the state before making changes
+        self.save_state()
 
-        # Create a new empty frame with the specified or default color
         try:
             new_frame = Image.new("RGBA", frame_size, color_code if color_code else (0, 0, 0, 0))
         except Exception as e:
             messagebox.showerror("Error", f"Failed to create a new frame: {e}")
             return
 
-        # Add the new frame to the list of frames
         self.frames.append(new_frame)
-        self.delays.append(100)  # Default delay for new frame
+        self.delays.append(100)
         var = IntVar()
         var.trace_add('write', lambda *args, i=len(self.checkbox_vars): self.set_current_frame(i))
         self.checkbox_vars.append(var)
@@ -1131,7 +1074,7 @@ class GIFEditor:
             messagebox.showerror("Error", "No frames to delete.")
             return
 
-        self.save_state()  # Save the state before making changes
+        self.save_state()
         indices_to_delete = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
 
         if not indices_to_delete:
@@ -1143,12 +1086,11 @@ class GIFEditor:
             del self.delays[index]
             del self.checkbox_vars[index]
 
-        # Update frame_index to ensure it is within the correct bounds
         if self.frame_index >= len(self.frames):
             self.frame_index = max(0, len(self.frames) - 1)
 
         self.update_frame_list()
-        self.show_frame()  # Update the frame display
+        self.show_frame()
 
     def delete_unchecked_frames(self, event=None):
         """Delete all frames that are not checked in the checkbox list."""
@@ -1156,7 +1098,7 @@ class GIFEditor:
             messagebox.showerror("Error", "No frames to delete.")
             return
 
-        self.save_state()  # Save the state before making changes
+        self.save_state()
 
         indices_to_keep = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
 
@@ -1164,55 +1106,49 @@ class GIFEditor:
             messagebox.showinfo("Info", "No frames are checked to keep.")
             return
 
-        # Keep only the checked frames
         self.frames = [self.frames[i] for i in indices_to_keep]
         self.delays = [self.delays[i] for i in indices_to_keep]
         self.checkbox_vars = [self.checkbox_vars[i] for i in indices_to_keep]
 
-        # Update frame_index to ensure it is within the correct bounds
         if self.frame_index >= len(self.frames):
             self.frame_index = max(0, len(self.frames) - 1)
 
         self.update_frame_list()
-        self.show_frame()  # Update the frame display
+        self.show_frame()
 
     def toggle_check_all(self, event=None):
         """Toggle all checkboxes in the frame list without scrolling or changing the displayed frame."""
-        self.save_state()  # Save the state before making changes
+        self.save_state()
         new_state = not self.check_all.get()
         self.check_all.set(new_state)
-        
-        # Temporarily remove traces
+
         for var in self.checkbox_vars:
             var.trace_remove('write', var.trace_info()[0][1])
-        
+
         for var in self.checkbox_vars:
             var.set(1 if new_state else 0)
-        
-        # Re-add traces
+
         for i, var in enumerate(self.checkbox_vars):
             var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
-        
+
         self.update_frame_list()
-    
+
     def mark_even_odd_frames(self):
         """Mark the checkboxes of all even or odd frames based on user input."""
-        self.save_state()  # Save the state before making changes
+        self.save_state()
         choice = simpledialog.askinteger("Select Frames", "Enter 1 to mark odd frames, 2 to mark even frames:")
 
         if choice not in [1, 2]:
             messagebox.showerror("Invalid Input", "Please enter 1 for odd frames or 2 for even frames.")
             return
 
-        # Clear all checkboxes first
         for var in self.checkbox_vars:
             var.set(0)
 
-        # Mark even or odd frames based on user input
         for i, var in enumerate(self.checkbox_vars):
-            if choice == 1 and i % 2 == 0:  # 1 for odd frames (0-based index)
+            if choice == 1 and i % 2 == 0:
                 var.set(1)
-            elif choice == 2 and i % 2 != 0:  # 2 for even frames (0-based index)
+            elif choice == 2 and i % 2 != 0:
                 var.set(1)
 
     def mark_frames_relative_to_cursor(self):
@@ -1252,7 +1188,6 @@ class GIFEditor:
             messagebox.showinfo("Info", "No frames selected for cropping.")
             return
 
-        # Prompt user for crop values
         try:
             crop_left = int(simpledialog.askstring("Crop", "Enter pixels to crop from the left:", parent=self.master))
             crop_right = int(simpledialog.askstring("Crop", "Enter pixels to crop from the right:", parent=self.master))
@@ -1262,12 +1197,11 @@ class GIFEditor:
             messagebox.showerror("Invalid Input", "Please enter valid integers for cropping values.")
             return
 
-        # Validate crop values
         if crop_left < 0 or crop_right < 0 or crop_top < 0 or crop_bottom < 0:
             messagebox.showerror("Invalid Input", "Crop values must be non-negative integers.")
             return
 
-        self.save_state()  # Save the state before making changes
+        self.save_state()
 
         for index in selected_indices:
             frame = self.frames[index]
@@ -1295,7 +1229,7 @@ class GIFEditor:
 
         width = simpledialog.askinteger("Input", "Enter new width:", parent=self.master, minvalue=1)
         height = simpledialog.askinteger("Input", "Enter new height:", parent=self.master, minvalue=1)
-        
+
         if width and height:
             self.resize_frames(width, height)
 
@@ -1371,7 +1305,15 @@ class GIFEditor:
     def reverse_frames(self):
         """Apply reverse effect to the selected frames."""
         self.save_state()  # Save the state before making changes
+
         if not self.check_any_frame_selected():
+            return
+
+        # Get indices of selected frames
+        indices_to_reverse = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+
+        if not indices_to_reverse:
+            messagebox.showwarning("No Frame Selected", "No frames are selected. Please select a frame to apply the effect.")
             return
 
         # Extract the selected frames and their delays
@@ -2506,7 +2448,7 @@ class GIFEditor:
                     if width <= MAX_WIDTH and height <= MAX_HEIGHT:
                         self.preview_width = width
                         self.preview_height = height
-                        self.show_frame()  # Update the displayed frame with new resolution
+                        self.show_frame()
                     else:
                         messagebox.showerror("Invalid Resolution", f"Resolution exceeds the maximum allowed size of {MAX_WIDTH}x{MAX_HEIGHT}.")
                 else:
@@ -2543,15 +2485,15 @@ class GIFEditor:
             return
 
         composite_frame = Image.new("RGBA", self.frames[0].size, (255, 255, 255, 0))
-        transparency_factor = 0.5  # Adjust transparency factor as needed
+        transparency_factor = 0.5
 
         for idx, i in enumerate(checked_indices):
             if i >= len(self.frames):
-                continue  # Skip if index is out of range
+                continue
 
             frame = self.frames[i].copy()
-            if idx != 0:  # Only make frames transparent and black and white if not the first checked frame
-                frame = frame.convert("L").convert("RGBA")  # Convert to black and white
+            if idx != 0:
+                frame = frame.convert("L").convert("RGBA")
                 alpha = frame.split()[3]
                 alpha = ImageEnhance.Brightness(alpha).enhance(transparency_factor)
                 frame.putalpha(alpha)
@@ -2560,12 +2502,12 @@ class GIFEditor:
         draw = ImageDraw.Draw(composite_frame)
         font_size = 20
         try:
-            font = ImageFont.truetype("arial.ttf", font_size)  # Ensure you have a font file available
+            font = ImageFont.truetype("arial.ttf", font_size)
         except IOError:
-            font = ImageFont.load_default()  # Fall back to default font if specified font is not available
+            font = ImageFont.load_default()
         text = "T"
         text_position = (composite_frame.width - font_size - 20, 10)
-        text_color = (255, 0, 0, 255)  # Red color for visibility
+        text_color = (255, 0, 0, 255)
         draw.text(text_position, text, font=font, fill=text_color)
 
         preview = self.resize_image(composite_frame, max_width=self.preview_width, max_height=self.preview_height)
@@ -2580,7 +2522,6 @@ class GIFEditor:
         if self.is_preview_mode:
             self.is_preview_mode = False
             self.show_frame()
-            # Unbind the key event
             self.master.unbind_all("<Key>")
 
     def play_next_frame(self):
@@ -2590,83 +2531,85 @@ class GIFEditor:
             delay = self.delays[self.frame_index]
             self.frame_index = (self.frame_index + 1) % len(self.frames)
             self.master.after(delay, self.play_next_frame)
-            
+
     def toggle_draw_mode(self, event=None):
         """Toggle draw mode on and off."""
-        self.save_state()  # Save the state before making changes
+        self.save_state()
 
-        # Check if any checkbox is marked
         if not any(var.get() for var in self.checkbox_vars):
             messagebox.showwarning("Draw Mode", "No frame is selected for drawing.")
             self.is_draw_mode = False
             return
 
         self.is_draw_mode = not self.is_draw_mode
+
         if self.is_draw_mode:
-            # Ensure the current frame is marked
             if not self.checkbox_vars[self.frame_index].get():
                 messagebox.showwarning("Draw Mode", "Current frame must be selected for drawing.")
                 self.is_draw_mode = False
                 return
 
-            # Bind events for drawing and tool selection
-            self.master.bind("<Motion>", self.draw)
-            self.master.bind("<Button-1>", self.start_drawing)
-            self.master.bind("<ButtonRelease-1>", self.stop_drawing)
-            self.master.bind("<Key-1>", self.set_tool_brush)
-            self.master.bind("<Key-2>", self.set_tool_eraser)
-            self.master.bind("<Key-3>", self.set_tool_color)
-            self.master.bind("<Key-4>", self.prompt_brush_size)
-            self.master.bind("<bracketleft>", self.decrease_brush_size)
-            self.master.bind("<bracketright>", self.increase_brush_size)
-
-            self.show_frame_with_overlay()  # Show frame with 'D' overlay
+            self.bind_drawing_events()
+            self.show_frame_with_overlay()
             messagebox.showinfo("Draw Mode", "Entered Draw Mode")
         else:
-            # Unbind events when exiting draw mode
-            self.master.unbind("<Motion>")
-            self.master.unbind("<Button-1>")
-            self.master.unbind("<ButtonRelease-1>")
-            self.master.unbind("<Key-1>")
-            self.master.unbind("<Key-2>")
-            self.master.unbind("<Key-3>")
-            self.master.unbind("<Key-4>")
-            self.master.unbind("<bracketleft>")
-            self.master.unbind("<bracketright>")
-
-            self.show_frame()  # Show frame without overlay
+            self.unbind_drawing_events()
+            self.show_frame()
             messagebox.showinfo("Draw Mode", "Exited Draw Mode")
+
+    def bind_drawing_events(self):
+        """Bind events for drawing mode."""
+        self.master.bind("<Motion>", self.draw)
+        self.master.bind("<Button-1>", self.start_drawing)
+        self.master.bind("<ButtonRelease-1>", self.stop_drawing)
+        self.master.bind("<Key-1>", self.set_tool_brush)
+        self.master.bind("<Key-2>", self.set_tool_eraser)
+        self.master.bind("<Key-3>", self.set_tool_color)
+        self.master.bind("<Key-4>", self.prompt_brush_size)
+        self.master.bind("<bracketleft>", self.decrease_brush_size)
+        self.master.bind("<bracketright>", self.increase_brush_size)
+
+    def unbind_drawing_events(self):
+        """Unbind events for drawing mode."""
+        self.master.unbind("<Motion>")
+        self.master.unbind("<Button-1>")
+        self.master.unbind("<ButtonRelease-1>")
+        self.master.unbind("<Key-1>")
+        self.master.unbind("<Key-2>")
+        self.master.unbind("<Key-3>")
+        self.master.unbind("<Key-4>")
+        self.master.unbind("<bracketleft>")
+        self.master.unbind("<bracketright>")
 
     def show_frame_with_overlay(self):
         """Display the current frame with 'D' overlay in the upper right corner."""
         if self.frames:
             if self.frame_index >= len(self.frames):
-                self.frame_index = len(self.frames) - 1  # Ensure the frame index is within bounds
+                self.frame_index = len(self.frames) - 1
             frame = self.frames[self.frame_index]
             preview = self.resize_image(frame, max_width=self.preview_width, max_height=self.preview_height)
-            
-            # Add 'D' overlay to the preview
+
             draw = ImageDraw.Draw(preview)
             text_position = (preview.width - 20, 10)
-            text_color = (255, 0, 0, 255)  # Red color for visibility
+            text_color = (255, 0, 0, 255)
             draw.text(text_position, "D", fill=text_color)
-            
+
             photo = ImageTk.PhotoImage(preview)
             self.image_label.config(image=photo)
             self.image_label.image = photo
-            self.image_label.config(text='')  # Remove text when showing image
+            self.image_label.config(text='')
             self.delay_entry.delete(0, tk.END)
             self.delay_entry.insert(0, str(self.delays[self.frame_index]))
-            self.dimension_label.config(text=f"Size: {frame.width}x{frame.height}")  # Show frame dimensions
+            self.dimension_label.config(text=f"Size: {frame.width}x{frame.height}")
             total_duration = sum(self.delays)
-            self.total_duration_label.config(text=f"Total Duration: {total_duration} ms")  # Show total duration
+            self.total_duration_label.config(text=f"Total Duration: {total_duration} ms")
         else:
             self.image_label.config(image='', text="No frames to display")
             self.image_label.image = None
             self.delay_entry.delete(0, tk.END)
-            self.dimension_label.config(text="")  # Clear frame dimensions
-            self.total_duration_label.config(text="")  # Clear total duration
-        self.update_frame_list()  # Refresh the frame list to show the current frame indicator
+            self.dimension_label.config(text="")
+            self.total_duration_label.config(text="")
+        self.update_frame_list()
 
     def set_tool_brush(self, event=None):
         """Set the drawing tool to brush and display an infobox."""
@@ -2738,25 +2681,23 @@ class GIFEditor:
                     draw.line([self.last_x, self.last_y, x, y], fill=(255, 255, 255, 0), width=self.brush_size)
                 self.frames[self.frame_index] = frame
                 self.last_x, self.last_y = x, y
-                self.show_frame_with_overlay()  # Ensure 'D' overlay remains after drawing
-
+                self.show_frame_with_overlay()
 
     def draw_brush(self, draw, x1, y1, x2, y2):
         """Draw a smooth, round brush stroke."""
-        # Increase the exponent to 0.9 for a smoother line with more steps
-        distance = ((x2 - x1)**2 + (y2 - y1)**2)**0.9
+        distance = ((x2 - x1)**2 + (y2 - y1)**2)**0.5
         num_steps = int(distance / self.brush_size) + 1
         for i in range(num_steps):
             x = x1 + i * (x2 - x1) / num_steps
             y = y1 + i * (y2 - y1) / num_steps
             draw.ellipse([x - self.brush_size / 2, y - self.brush_size / 2, x + self.brush_size / 2, y + self.brush_size / 2], fill=self.brush_color, outline=self.brush_color)
 
-
     def scale_coordinates(self, x, y):
         """Scale the coordinates based on the current preview resolution."""
         original_width, original_height = self.frames[self.frame_index].size
-        scale_x = original_width / self.preview_width
-        scale_y = original_height / self.preview_height
+        preview_width, preview_height = self.image_label.winfo_width(), self.image_label.winfo_height()
+        scale_x = original_width / preview_width
+        scale_y = original_height / preview_height
         return int(x * scale_x), int(y * scale_y)
 
 # MENU HELP
@@ -2769,7 +2710,7 @@ class GIFEditor:
         """Set the delay for the selected frames."""
         try:
             delay = int(self.delay_entry.get())
-            self.save_state()  # Save the state before making changes
+            self.save_state()
             for i, var in enumerate(self.checkbox_vars):
                 if var.get() == 1:
                     self.delays[i] = delay
@@ -2781,7 +2722,7 @@ class GIFEditor:
         """Set focus to the delay entry field and scroll to the current frame."""
         self.delay_entry.focus_set()
         self.focus_current_frame()
-    
+
     def focus_current_frame(self):
         """Ensure the current frame is visible in the frame list."""
         if self.frame_list.winfo_children():
@@ -2804,7 +2745,6 @@ class GIFEditor:
         self.frame_list = Frame(self.canvas)
         self.canvas.create_window((0, 0), window=self.frame_list, anchor='nw')
 
-        # Ensure the frame list is properly resized and configured to update the scrollbar
         self.frame_list.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
 
         self.update_frame_list()
@@ -2823,12 +2763,10 @@ class GIFEditor:
         self.control_frame_canvas.config(yscrollcommand=self.control_frame_scrollbar.set)
         self.control_frame.bind("<Configure>", lambda e: self.control_frame_canvas.config(scrollregion=self.control_frame_canvas.bbox("all")))
 
-        # Frame for image display
         self.image_display_frame = tk.Frame(self.control_frame)
         self.image_display_frame.grid(row=0, column=0, padx=20, pady=20, sticky='n')
 
-        # Add a border to the image_label
-        self.image_label = tk.Label(self.image_display_frame, bd=0, relief="flat")  # No border initially
+        self.image_label = tk.Label(self.image_display_frame, bd=0, relief="flat")
         self.image_label.pack()
 
         self.dimension_label = tk.Label(self.image_display_frame, text="", font=("Arial", 8), fg="grey")
@@ -2837,7 +2775,6 @@ class GIFEditor:
         self.total_duration_label = tk.Label(self.image_display_frame, text="", font=("Arial", 8), fg="grey")
         self.total_duration_label.pack(pady=5)
 
-        # Frame for control inputs
         self.control_inputs_frame = tk.Frame(self.control_frame)
         self.control_inputs_frame.grid(row=1, column=0, padx=20, pady=10, sticky='n')
 
@@ -2854,7 +2791,6 @@ class GIFEditor:
         self.play_button = tk.Button(self.control_inputs_frame, text="Play", command=self.toggle_play_pause)
         self.play_button.grid(row=2, column=0, columnspan=2, pady=5)
 
-        # Make sure the window is scrolled to the correct size
         self.control_frame.update_idletasks()
         self.control_frame_canvas.config(scrollregion=self.control_frame.bbox("all"))
 
@@ -2889,7 +2825,7 @@ class GIFEditor:
         self.master.bind("<Control-V>", self.paste_frames)
         self.master.bind("<Control-g>", self.go_to_frame)
         self.master.bind("<Control-G>", self.go_to_frame)
-        self.master.bind("<Control-z>", self.undo) 
+        self.master.bind("<Control-z>", self.undo)
         self.master.bind("<Control-Z>", self.undo)
         self.master.bind("<Control-y>", self.redo)
         self.master.bind("<Control-Y>", self.redo)
@@ -2926,17 +2862,14 @@ class GIFEditor:
 
     def update_frame_list(self):
         """Update the frame list with the current frames and their delays."""
-        # Clear existing widgets
         for widget in self.frame_list.winfo_children():
             widget.destroy()
 
-        # Display message if no frames are available
         if not self.frames:
             tk.Label(self.frame_list, text="No frames available").pack()
             self.canvas.config(scrollregion=self.canvas.bbox("all"))
             return
 
-        # Create and populate frame widgets
         for i, (frame, delay, var) in enumerate(zip(self.frames, self.delays, self.checkbox_vars)):
             frame_container = Frame(self.frame_list, bg='gray' if i == self.frame_index else self.frame_list.cget('bg'))
             frame_container.pack(fill=tk.X)
@@ -2951,7 +2884,6 @@ class GIFEditor:
             label = tk.Label(frame_container, text=frame_label_text, bg=frame_container.cget('bg'))
             label.pack(side=tk.LEFT, fill=tk.X)
 
-        # Update the scroll region
         self.canvas.config(scrollregion=self.canvas.bbox("all"))
 
     def set_current_frame(self, index):
@@ -2963,31 +2895,30 @@ class GIFEditor:
         """Display the current frame."""
         if self.frames:
             if self.frame_index >= len(self.frames):
-                self.frame_index = len(self.frames) - 1  # Ensure the frame index is within bounds
+                self.frame_index = len(self.frames) - 1
             frame = self.frames[self.frame_index]
             preview = self.resize_image(frame, max_width=self.preview_width, max_height=self.preview_height)
             photo = ImageTk.PhotoImage(preview)
-            self.image_label.config(image=photo, bd=2, relief="solid")  # Add border when frames are available
+            self.image_label.config(image=photo, bd=2, relief="solid")
             self.image_label.image = photo
-            self.image_label.config(text='')  # Remove text when showing image
+            self.image_label.config(text='')
             self.delay_entry.delete(0, tk.END)
             self.delay_entry.insert(0, str(self.delays[self.frame_index]))
-            self.dimension_label.config(text=f"Size: {frame.width}x{frame.height}")  # Show frame dimensions
+            self.dimension_label.config(text=f"Size: {frame.width}x{frame.height}")
             total_duration = sum(self.delays)
-            self.total_duration_label.config(text=f"Total Duration: {total_duration} ms")  # Show total duration
+            self.total_duration_label.config(text=f"Total Duration: {total_duration} ms")
         else:
-            self.image_label.config(image='', text="No frames to display", bd=0, relief="flat")  # Remove border when no frames
+            self.image_label.config(image='', text="No frames to display", bd=0, relief="flat")
             self.image_label.image = None
             self.delay_entry.delete(0, tk.END)
-            self.dimension_label.config(text="")  # Clear frame dimensions
-            self.total_duration_label.config(text="")  # Clear total duration
-        self.update_frame_list()  # Refresh the frame list to show the current frame indicator
-
+            self.dimension_label.config(text="")
+            self.total_duration_label.config(text="")
+        self.update_frame_list()
 
     def save_state(self):
         """Save the current state for undo functionality."""
         self.history.append((self.frames.copy(), self.delays.copy(), [var.get() for var in self.checkbox_vars], self.frame_index, self.current_file))
-        self.redo_stack.clear()  # Clear the redo stack on new action
+        self.redo_stack.clear()
 
     def resize_image(self, image, max_width, max_height):
         """Resize image while maintaining aspect ratio."""
