@@ -1027,7 +1027,7 @@ class GIFEditor:
         self.show_frame()
 
     def add_empty_frame(self):
-        """Add an empty frame with an optional background color. If there are no frames, prompt for the size of the new frame."""
+        """Add an empty frame with full transparency. If there are no frames, prompt for the size of the new frame."""
         if not self.frames:
             width = simpledialog.askinteger("Frame Size", "Enter frame width:", minvalue=1)
             height = simpledialog.askinteger("Frame Size", "Enter frame height:", minvalue=1)
@@ -1035,26 +1035,14 @@ class GIFEditor:
                 messagebox.showerror("Invalid Input", "Width and height must be positive integers.")
                 return
             frame_size = (width, height)
-
-            color_code = simpledialog.askstring("Add Empty Frame", "Enter background color (hex code, e.g., #FFFFFF for white):")
         else:
             frame_size = self.frames[0].size
-
-            color_code = simpledialog.askstring("Add Empty Frame", "Enter background color (hex code, e.g., #FFFFFF for white):")
-
-        if color_code and len(color_code) == 7 and color_code[0] == '#':
-            try:
-                Image.new("RGBA", (1, 1), color_code).verify()
-            except ValueError:
-                messagebox.showerror("Invalid Color", "The entered color code is invalid. Using transparent background instead.")
-                color_code = None
-        else:
-            color_code = None
 
         self.save_state()
 
         try:
-            new_frame = Image.new("RGBA", frame_size, color_code if color_code else (0, 0, 0, 0))
+            # Create a new frame with full transparency
+            new_frame = Image.new("RGBA", frame_size, (0, 0, 0, 0))
         except Exception as e:
             messagebox.showerror("Error", f"Failed to create a new frame: {e}")
             return
@@ -2492,12 +2480,13 @@ class GIFEditor:
                 continue
 
             frame = self.frames[i].copy()
-            if idx != 0:
-                frame = frame.convert("L").convert("RGBA")
-                alpha = frame.split()[3]
-                alpha = ImageEnhance.Brightness(alpha).enhance(transparency_factor)
-                frame.putalpha(alpha)
-            composite_frame = Image.alpha_composite(composite_frame, frame)
+            if frame.getbbox() is not None:  # Check if the frame is not completely transparent
+                if idx != 0:
+                    frame = frame.convert("RGBA")
+                    alpha = frame.split()[3]
+                    alpha = ImageEnhance.Brightness(alpha).enhance(transparency_factor)
+                    frame.putalpha(alpha)
+                composite_frame = Image.alpha_composite(composite_frame, frame)
 
         draw = ImageDraw.Draw(composite_frame)
         font_size = 20
