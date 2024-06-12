@@ -401,15 +401,37 @@ class GIFEditor:
             try:
                 _, ext = os.path.splitext(file_path)
                 ext = ext[1:].lower()  # Remove the dot and convert to lowercase
+
+                # Prompt for loop option and count
+                loop_option = messagebox.askyesno("Loop Option", "Do you want the animation to loop?")
+                if loop_option:
+                    loop_count = simpledialog.askinteger("Loop Count", "Enter the number of loops (0 for infinite):", minvalue=0)
+                else:
+                    loop_count = 1
+
                 if ext == 'gif':
-                    self.frames[0].save(file_path, save_all=True, append_images=self.frames[1:], duration=self.delays, loop=0)
+                    dispose_option = messagebox.askyesno("GIF Disposal Option", "Do you want to enable disposal for the GIF frames?")
+                    disposal = 2 if dispose_option else 0
+                    self.frames[0].save(
+                        file_path, save_all=True, append_images=self.frames[1:], 
+                        duration=self.delays, loop=loop_count, disposal=disposal
+                    )
                 elif ext == 'png':
-                    self.frames[0].save(file_path, save_all=True, append_images=self.frames[1:], duration=self.delays, loop=0, format='PNG')
+                    # APNG does not have a built-in disposal setting, but it supports looping
+                    self.frames[0].save(
+                        file_path, save_all=True, append_images=self.frames[1:], 
+                        duration=self.delays, loop=loop_count, format='PNG'
+                    )
                 elif ext == 'webp':
-                    self.frames[0].save(file_path, save_all=True, append_images=self.frames[1:], duration=self.delays, loop=0, format='WEBP')
+                    # WebP does not have a built-in disposal setting, but it supports looping
+                    self.frames[0].save(
+                        file_path, save_all=True, append_images=self.frames[1:], 
+                        duration=self.delays, loop=loop_count, format='WEBP'
+                    )
                 else:
                     messagebox.showerror("Error", f"Unsupported file format: {ext.upper()}")
                     return
+
                 self.current_file = file_path
                 self.update_title()
                 messagebox.showinfo("Success", f"{ext.upper()} saved successfully!")
