@@ -1283,6 +1283,40 @@ class GIFEditor:
         self.update_frame_list()
         self.show_frame()
 
+        # Prompt the user to delete Frame 1
+        delete_frame_1 = messagebox.askyesno("Delete Frame 1", "Do you want to delete Frame 1 after applying it to the checked frames?")
+
+        if delete_frame_1:
+            self.delete_frame_1()
+
+    def delete_frame_1(self):
+        """Delete Frame 1 and ensure there are no issues with the frame list cursor."""
+        if len(self.frames) <= 1:
+            messagebox.showinfo("Info", "Cannot delete Frame 1 because it is the only frame.")
+            return
+
+        # Remove traces before deleting
+        if self.checkbox_vars[0].trace_info():
+            self.checkbox_vars[0].trace_remove('write', self.checkbox_vars[0].trace_info()[0][1])
+
+        # Delete Frame 1
+        del self.frames[0]
+        del self.delays[0]
+        del self.checkbox_vars[0]
+
+        # Re-add traces after deleting
+        for i, var in enumerate(self.checkbox_vars):
+            if var.trace_info():
+                var.trace_remove('write', var.trace_info()[0][1])
+            var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
+
+        # Adjust the frame index
+        self.frame_index = 0
+
+        self.update_frame_list()
+        self.show_frame()
+        self.focus_current_frame()
+
     def apply_overlay_frame(self):
         """Apply an overlay frame (watermark or border) to the selected frames with user-defined transparency."""
         if not self.frames:
