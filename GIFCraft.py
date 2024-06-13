@@ -106,7 +106,8 @@ class GIFEditor:
         edit_menu.add_command(label="Flip Selected Frames Horizontal", command=self.flip_selected_frames_horizontal)
         edit_menu.add_command(label="Flip Selected Frames Vertical", command=self.flip_selected_frames_vertical)
         edit_menu.add_separator()
-        edit_menu.add_command(label="Move Image", command=self.move_image_in_frame_list)
+        edit_menu.add_command(label="Move Frame Image", command=self.move_image_in_frame_list)
+        edit_menu.add_command(label="Move Multiple Frames Image", command=self.move_multiple_frames)
         self.menu_bar.add_cascade(label="Edit", menu=edit_menu)
 
     def create_frames_menu(self):
@@ -721,6 +722,87 @@ class GIFEditor:
             self.master.bind("<ButtonRelease-1>", on_release)
             self.is_move_mode = True
             messagebox.showinfo("Move Image", "Move image mode activated.")
+
+    def move_multiple_frames(self):
+        """Enable moving images within the selected frames using the mouse. Toggle the mode with this function."""
+        
+        def on_press(event):
+            """Store the initial mouse position."""
+            self.start_x = event.x
+            self.start_y = event.y
+
+        def on_motion(event):
+            """Move the images based on mouse movement."""
+            selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
+
+            if not selected_indices:
+                return  # Do nothing if no frames are selected
+
+            frame_width, frame_height = self.frames[0].size  # Assume all frames have the same size
+            preview_width, preview_height = self.image_label.winfo_width(), self.image_label.winfo_height()
+
+            # Check if the cursor is within the preview area
+            if not (0 <= event.x <= preview_width and 0 <= event.y <= preview_height):
+                return
+
+            # Calculate the offsets
+            dx = event.x - self.start_x
+            dy = event.y - self.start_y
+
+            # Scale offsets to the frame size
+            scale_x = frame_width / preview_width
+            scale_y = frame_height / preview_height
+            dx_scaled = int(dx * scale_x)
+            dy_scaled = int(dy * scale_y)
+
+            for index in selected_indices:
+                frame = self.frames[index]
+
+                # Initialize offset attributes if they don't exist
+                if not hasattr(frame, 'offset_x'):
+                    frame.offset_x = 0
+                if not hasattr(frame, 'offset_y'):
+                    frame.offset_y = 0
+
+                frame.offset_x += dx_scaled
+                frame.offset_y += dy_scaled
+
+                # Create a new image with the same size and a transparent background
+                new_frame = Image.new("RGBA", frame.size, (0, 0, 0, 0))
+
+                # Ensure the image doesn't get cropped
+                paste_x = frame.offset_x
+                paste_y = frame.offset_y
+
+                new_frame.paste(frame, (paste_x, paste_y), frame)
+
+                self.frames[index] = new_frame
+
+            self.start_x = event.x
+            self.start_y = event.y
+            self.show_frame()
+
+        def on_release(event):
+            """Finalize the image position."""
+            self.start_x = None
+            self.start_y = None
+
+        # Toggle the move mode
+        if not hasattr(self, 'is_move_mode_multiple'):
+            self.is_move_mode_multiple = False
+
+        if self.is_move_mode_multiple:
+            self.master.unbind("<ButtonPress-1>")
+            self.master.unbind("<B1-Motion>")
+            self.master.unbind("<ButtonRelease-1>")
+            self.is_move_mode_multiple = False
+            messagebox.showinfo("Move Images", "Move images mode deactivated.")
+        else:
+            self.master.bind("<ButtonPress-1>", on_press)
+            self.master.bind("<B1-Motion>", on_motion)
+            self.master.bind("<ButtonRelease-1>", on_release)
+            self.is_move_mode_multiple = True
+            messagebox.showinfo("Move Images", "Move images mode activated.")
 
 # MENU FRAMES
 
