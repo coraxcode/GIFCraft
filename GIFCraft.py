@@ -878,20 +878,11 @@ class GIFEditor:
             return sorted(fonts, key=lambda f: os.path.basename(f).lower())
 
         fonts = get_system_fonts()
-        font_names = [os.path.basename(f).replace('.ttf', '').replace('.otf', '') for f in fonts]
-        default_font = None
+        font_map = {os.path.basename(f).replace('.ttf', '').replace('.otf', '').lower(): f for f in fonts}
+        font_names = list(font_map.keys())
+        default_font = 'arial' if 'arial' in font_map else next(iter(font_map), None)
 
-        if platform.system() == 'Windows':
-            default_font = 'arial'
-        elif platform.system() == 'Darwin':
-            default_font = next((f for f in font_names if 'arial' in f.lower()), None)
-        elif platform.system() == 'Linux':
-            default_font = next((f for f in font_names if 'dejavusans' in f.lower()), None)
-
-        if not default_font and fonts:
-            default_font = font_names[0]
-
-        if not fonts:
+        if not default_font:
             messagebox.showerror("Error", "No fonts found on the system.")
             return
 
@@ -910,9 +901,10 @@ class GIFEditor:
         font_combobox.set(default_font)
         font_combobox.grid(row=2, column=1, padx=10, pady=5)
 
-        def update_font_preview(event):
-            selected_font_name = font_combobox.get()
-            selected_font_path = next((f for f in fonts if os.path.basename(f).replace('.ttf', '').replace('.otf', '') == selected_font_name), None)
+        def update_font_preview(event=None):
+            selected_font_name = font_combobox.get().lower()
+            selected_font_path = font_map.get(selected_font_name)
+            
             if selected_font_path:
                 try:
                     preview_font = ImageFont.truetype(selected_font_path, 14)
@@ -928,11 +920,6 @@ class GIFEditor:
         font_size_entry = tk.Entry(top, width=30)
         font_size_entry.grid(row=3, column=1, padx=10, pady=5)
         font_size_entry.insert(0, "20")
-
-        bold_var = tk.BooleanVar()
-        italic_var = tk.BooleanVar()
-        tk.Checkbutton(top, text="Bold", variable=bold_var).grid(row=4, column=0, padx=10, pady=5)
-        tk.Checkbutton(top, text="Italic", variable=italic_var).grid(row=4, column=1, padx=10, pady=5)
 
         tk.Label(top, text="Choose text color:").grid(row=5, column=0, padx=10, pady=5)
         text_color_button = tk.Button(top, text="Select Color")
@@ -979,7 +966,7 @@ class GIFEditor:
 
         def submit():
             text = text_entry.get()
-            font_choice = font_combobox.get()
+            font_choice = font_combobox.get().lower()
             font_size = font_size_entry.get()
             outline_thickness = outline_thickness_entry.get()
             position_choice = position_combobox.get().lower()
@@ -989,31 +976,21 @@ class GIFEditor:
                 messagebox.showerror("Error", "Please fill all fields correctly.")
                 return
 
-            font_path = next((f for f in fonts if os.path.basename(f).replace('.ttf', '').replace('.otf', '') == font_choice), default_font)
+            font_path = font_map.get(font_choice)
             font_size = int(font_size)
             outline_thickness = int(outline_thickness)
             margin = int(margin)
-            bold = bold_var.get()
-            italic = italic_var.get()
-
-            if bold and italic:
-                font_style = "bolditalic"
-            elif bold:
-                font_style = "bold"
-            elif italic:
-                font_style = "italic"
-            else:
-                font_style = "regular"
-
-            base_size = self.frames[0].size
-            new_frame = Image.new("RGBA", base_size, (0, 0, 0, 0))
+            text_color_local = text_color
+            outline_color_local = outline_color
 
             try:
                 font = ImageFont.truetype(font_path, font_size)
             except IOError:
                 messagebox.showerror("Error", f"Failed to load font: {font_choice}. Using default font.")
-                font = ImageFont.truetype(default_font, font_size)
+                font = ImageFont.truetype(font_map.get('arial'), font_size)
 
+            base_size = self.frames[0].size
+            new_frame = Image.new("RGBA", base_size, (0, 0, 0, 0))
             draw = ImageDraw.Draw(new_frame)
 
             text_bbox = draw.textbbox((0, 0), text, font=font)
@@ -1051,8 +1028,8 @@ class GIFEditor:
                 for dx in range(-outline_thickness, outline_thickness + 1):
                     for dy in range(-outline_thickness, outline_thickness + 1):
                         if dx != 0 or dy != 0:
-                            draw.text((text_position[0] + dx, text_position[1] + dy), text, font=font, fill=outline_color)
-            draw.text(text_position, text, font=font, fill=text_color)
+                            draw.text((text_position[0] + dx, text_position[1] + dy), text, font=font, fill=outline_color_local)
+            draw.text(text_position, text, font=font, fill=text_color_local)
 
             self.frames.insert(0, new_frame)
             self.delays.insert(0, 100)
