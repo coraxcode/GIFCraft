@@ -178,7 +178,7 @@ class GIFEditor:
         animation_menu.add_command(label="Play/Stop Animation", command=self.toggle_play_pause, accelerator="Space")
         animation_menu.add_command(label="Change Preview Resolution", command=self.change_preview_resolution)
         animation_menu.add_command(label="Transparent Frames Preview", command=self.toggle_transparent_frames_preview, accelerator="T")
-        animation_menu.add_command(label="Draw Mode", command=self.toggle_draw_mode, accelerator="W")
+        animation_menu.add_command(label="Draw Mode", command=self.toggle_draw_mode, accelerator="D")
         self.menu_bar.add_cascade(label="Animation", menu=animation_menu)
 
     def create_help_menu(self):
@@ -3387,8 +3387,8 @@ class GIFEditor:
         self.master.bind("M", self.merge_frames)
         self.master.bind("x", self.toggle_checkbox)
         self.master.bind("X", self.toggle_checkbox)
-        self.master.bind("w", self.toggle_draw_mode)
-        self.master.bind("W", self.toggle_draw_mode)
+        self.master.bind("d", self.toggle_draw_mode)
+        self.master.bind("D", self.toggle_draw_mode)
         self.master.bind("a", self.toggle_check_all)
         self.master.bind("A", self.toggle_check_all)
         self.master.bind("t", self.toggle_transparent_frames_preview)
