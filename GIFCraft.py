@@ -1454,21 +1454,50 @@ class GIFEditor:
 
     def resize_frames_dialog(self):
         """Open a simple dialog to get new size and resize all frames."""
+        MAX_WIDTH = 2560
+        MAX_HEIGHT = 1600
+
         if not any(var.get() for var in self.checkbox_vars):
             messagebox.showinfo("info", "No frames are selected for resizing.")
             return
 
-        width = simpledialog.askinteger("Input", "Enter new width:", parent=self.master, minvalue=1)
-        height = simpledialog.askinteger("Input", "Enter new height:", parent=self.master, minvalue=1)
+        # Ask user if they want to maintain aspect ratio
+        maintain_aspect_ratio = messagebox.askyesno("Maintain Aspect Ratio", "Do you want to maintain the aspect ratio?")
 
-        if width and height:
-            self.resize_frames(width, height)
+        if maintain_aspect_ratio:
+            width = simpledialog.askinteger("Input", "Enter new width:", parent=self.master, minvalue=1, maxvalue=MAX_WIDTH)
+            if width:
+                self.resize_frames(width=width, maintain_aspect_ratio=True)
+        else:
+            size_input = simpledialog.askstring("Input", "Enter frame size (WidthxHeight):", parent=self.master)
+            if size_input:
+                try:
+                    width, height = map(int, size_input.lower().split('x'))
+                    if width <= 0 or height <= 0:
+                        raise ValueError("Dimensions must be positive integers.")
+                    if width > MAX_WIDTH or height > MAX_HEIGHT:
+                        raise ValueError(f"Dimensions cannot exceed {MAX_WIDTH}x{MAX_HEIGHT}.")
+                    self.resize_frames(width=width, height=height, maintain_aspect_ratio=False)
+                except ValueError as e:
+                    messagebox.showerror("Invalid Input", str(e))
 
-    def resize_frames(self, new_width, new_height):
+    def resize_frames(self, width, height=None, maintain_aspect_ratio=False):
         """Resize all checked frames to the specified width and height."""
+        MAX_WIDTH = 2560
+        MAX_HEIGHT = 1600
+
         self.save_state()
         for i, frame in enumerate(self.frames):
             if self.checkbox_vars[i].get():
+                if maintain_aspect_ratio:
+                    aspect_ratio = frame.width / frame.height
+                    new_height = int(width / aspect_ratio)
+                    new_height = min(new_height, MAX_HEIGHT)  # Ensure height does not exceed MAX_HEIGHT
+                    new_width = width  # Use the specified width
+                else:
+                    new_width = min(width, MAX_WIDTH)  # Ensure width does not exceed MAX_WIDTH
+                    new_height = min(height, MAX_HEIGHT)  # Ensure height does not exceed MAX_HEIGHT
+
                 self.frames[i] = frame.resize((new_width, new_height), Image.LANCZOS)
         self.update_frame_list()
         self.show_frame()
