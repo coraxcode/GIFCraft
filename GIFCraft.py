@@ -643,7 +643,8 @@ class GIFEditor:
         self.show_frame()
 
     def move_image_in_frame_list(self):
-        """Enable moving images within checked frames using the mouse."""
+        """Enable moving images within the currently selected frame using the mouse. Toggle the mode with this function."""
+        
         def on_press(event):
             """Store the initial mouse position."""
             self.start_x = event.x
@@ -651,32 +652,36 @@ class GIFEditor:
 
         def on_motion(event):
             """Move the image based on mouse movement."""
+            if self.frame_index < 0 or self.frame_index >= len(self.frames):
+                return
+
+            if not self.checkbox_vars[self.frame_index].get():
+                return  # Do nothing if the checkbox for the current frame is not checked
+
+            frame = self.frames[self.frame_index]
+
             dx = event.x - self.start_x
             dy = event.y - self.start_y
 
-            for i, var in enumerate(self.checkbox_vars):
-                if var.get() == 1:
-                    frame = self.frames[i]
+            # Initialize offset attributes if they don't exist
+            if not hasattr(frame, 'offset_x'):
+                frame.offset_x = 0
+            if not hasattr(frame, 'offset_y'):
+                frame.offset_y = 0
 
-                    # Initialize offset attributes if they don't exist
-                    if not hasattr(frame, 'offset_x'):
-                        frame.offset_x = 0
-                    if not hasattr(frame, 'offset_y'):
-                        frame.offset_y = 0
+            frame.offset_x += dx
+            frame.offset_y += dy
 
-                    frame.offset_x += dx
-                    frame.offset_y += dy
+            # Create a new image with the same size and a transparent background
+            new_frame = Image.new("RGBA", frame.size, (0, 0, 0, 0))
 
-                    # Create a new image with the same size and a transparent background
-                    new_frame = Image.new("RGBA", frame.size, (0, 0, 0, 0))
+            # Ensure the image doesn't get cropped
+            paste_x = frame.offset_x
+            paste_y = frame.offset_y
 
-                    # Calculate the position to paste the image ensuring it remains within boundaries
-                    paste_x = max(-(frame.width - 1), min(frame.width - 1, frame.offset_x))
-                    paste_y = max(-(frame.height - 1), min(frame.height - 1, frame.offset_y))
-                    
-                    new_frame.paste(frame, (paste_x, paste_y), frame)
+            new_frame.paste(frame, (paste_x, paste_y), frame)
 
-                    self.frames[i] = new_frame
+            self.frames[self.frame_index] = new_frame
 
             self.start_x = event.x
             self.start_y = event.y
@@ -687,9 +692,22 @@ class GIFEditor:
             self.start_x = None
             self.start_y = None
 
-        self.master.bind("<ButtonPress-1>", on_press)
-        self.master.bind("<B1-Motion>", on_motion)
-        self.master.bind("<ButtonRelease-1>", on_release)
+        # Toggle the move mode
+        if not hasattr(self, 'is_move_mode'):
+            self.is_move_mode = False
+
+        if self.is_move_mode:
+            self.master.unbind("<ButtonPress-1>")
+            self.master.unbind("<B1-Motion>")
+            self.master.unbind("<ButtonRelease-1>")
+            self.is_move_mode = False
+            messagebox.showinfo("Move Image", "Move image mode deactivated.")
+        else:
+            self.master.bind("<ButtonPress-1>", on_press)
+            self.master.bind("<B1-Motion>", on_motion)
+            self.master.bind("<ButtonRelease-1>", on_release)
+            self.is_move_mode = True
+            messagebox.showinfo("Move Image", "Move image mode activated.")
 
 # MENU FRAMES
 
