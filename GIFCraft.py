@@ -802,6 +802,17 @@ class GIFEditor:
         if target_position is not None:
             self.move_selected_frames(target_position)
 
+    def prompt_and_move_selected_frames(self):
+        """Prompt the user for the target position and move the selected frames."""
+        if not self.frames:
+            messagebox.showerror("Error", "No frames available to move.")
+            return
+
+        target_position = simpledialog.askinteger("Move Frames", "Enter the target position (0-based index):",
+                                                  minvalue=0, maxvalue=len(self.frames) - 1)
+        if target_position is not None:
+            self.move_selected_frames(target_position)
+
     def move_selected_frames(self, target_position):
         """
         Move selected frames to a specific target position.
