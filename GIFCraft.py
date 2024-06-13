@@ -105,6 +105,8 @@ class GIFEditor:
         edit_menu.add_separator()
         edit_menu.add_command(label="Flip Selected Frames Horizontal", command=self.flip_selected_frames_horizontal)
         edit_menu.add_command(label="Flip Selected Frames Vertical", command=self.flip_selected_frames_vertical)
+        edit_menu.add_separator()
+        edit_menu.add_command(label="Move Image", command=self.move_image_in_frame_list)
         self.menu_bar.add_cascade(label="Edit", menu=edit_menu)
 
     def create_frames_menu(self):
@@ -563,8 +565,6 @@ class GIFEditor:
         self.update_frame_list()
         self.show_frame()
 
-# MENU FRAMES
-
     def rotate_selected_frames_180(self):
         """Rotate the selected frames 180 degrees."""
         self.save_state()
@@ -641,6 +641,57 @@ class GIFEditor:
                 self.frames[i] = frame.transpose(Image.FLIP_TOP_BOTTOM)
         self.update_frame_list()
         self.show_frame()
+
+    def move_image_in_frame_list(self):
+        """Enable moving images within checked frames using the mouse."""
+        def on_press(event):
+            """Store the initial mouse position."""
+            self.start_x = event.x
+            self.start_y = event.y
+
+        def on_motion(event):
+            """Move the image based on mouse movement."""
+            dx = event.x - self.start_x
+            dy = event.y - self.start_y
+
+            for i, var in enumerate(self.checkbox_vars):
+                if var.get() == 1:
+                    frame = self.frames[i]
+
+                    # Initialize offset attributes if they don't exist
+                    if not hasattr(frame, 'offset_x'):
+                        frame.offset_x = 0
+                    if not hasattr(frame, 'offset_y'):
+                        frame.offset_y = 0
+
+                    frame.offset_x += dx
+                    frame.offset_y += dy
+
+                    # Create a new image with the same size and a transparent background
+                    new_frame = Image.new("RGBA", frame.size, (0, 0, 0, 0))
+
+                    # Calculate the position to paste the image ensuring it remains within boundaries
+                    paste_x = max(-(frame.width - 1), min(frame.width - 1, frame.offset_x))
+                    paste_y = max(-(frame.height - 1), min(frame.height - 1, frame.offset_y))
+                    
+                    new_frame.paste(frame, (paste_x, paste_y), frame)
+
+                    self.frames[i] = new_frame
+
+            self.start_x = event.x
+            self.start_y = event.y
+            self.show_frame()
+
+        def on_release(event):
+            """Finalize the image position."""
+            self.start_x = None
+            self.start_y = None
+
+        self.master.bind("<ButtonPress-1>", on_press)
+        self.master.bind("<B1-Motion>", on_motion)
+        self.master.bind("<ButtonRelease-1>", on_release)
+
+# MENU FRAMES
 
     def next_frame(self, event=None):
         """Show the next frame without altering the scrollbar position."""
