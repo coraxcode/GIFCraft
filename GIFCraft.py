@@ -738,7 +738,7 @@ class GIFEditor:
             self.focus_current_frame()
 
     def move_frame_up(self, event=None):
-        """Move the selected frame up in the list."""
+        """Move the selected frame up in the list, or to the top if Ctrl is held."""
         selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
 
         if len(selected_indices) != 1:
@@ -753,19 +753,41 @@ class GIFEditor:
 
         self.save_state()
 
-        self.frames[selected_index], self.frames[selected_index - 1] = self.frames[selected_index - 1], self.frames[selected_index]
-        self.delays[selected_index], self.delays[selected_index - 1] = self.delays[selected_index - 1], self.delays[selected_index]
+        # Check if Ctrl is pressed
+        if event.state & 0x4:  # 0x4 is the state value for Ctrl key
+            target_index = 0
+        else:
+            target_index = selected_index - 1
 
-        self.checkbox_vars[selected_index].set(0)
-        self.checkbox_vars[selected_index - 1].set(1)
+        # Remove traces before moving
+        for var in self.checkbox_vars:
+            if var.trace_info():
+                var.trace_remove('write', var.trace_info()[0][1])
 
-        self.frame_index = selected_index - 1
+        # Move the frame, delay, and checkbox variable
+        frame_to_move = self.frames.pop(selected_index)
+        delay_to_move = self.delays.pop(selected_index)
+        var_to_move = self.checkbox_vars.pop(selected_index)
 
+        self.frames.insert(target_index, frame_to_move)
+        self.delays.insert(target_index, delay_to_move)
+        self.checkbox_vars.insert(target_index, var_to_move)
+
+        # Set the moved checkbox and clear the original position
+        var_to_move.set(1)
+
+        # Re-add traces after moving
+        for i, var in enumerate(self.checkbox_vars):
+            var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
+
+        # Update frame index and UI components
+        self.frame_index = target_index
         self.update_frame_list()
         self.show_frame()
+        self.focus_current_frame()
 
     def move_frame_down(self, event=None):
-        """Move the selected frame down in the list."""
+        """Move the selected frame down in the list, or to the bottom if Ctrl is held."""
         selected_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
 
         if len(selected_indices) != 1:
@@ -780,16 +802,38 @@ class GIFEditor:
 
         self.save_state()
 
-        self.frames[selected_index], self.frames[selected_index + 1] = self.frames[selected_index + 1], self.frames[selected_index]
-        self.delays[selected_index], self.delays[selected_index + 1] = self.delays[selected_index + 1], self.delays[selected_index]
+        # Check if Ctrl is pressed
+        if event.state & 0x4:  # 0x4 is the state value for Ctrl key
+            target_index = len(self.frames) - 1
+        else:
+            target_index = selected_index + 1
 
-        self.checkbox_vars[selected_index].set(0)
-        self.checkbox_vars[selected_index + 1].set(1)
+        # Remove traces before moving
+        for var in self.checkbox_vars:
+            if var.trace_info():
+                var.trace_remove('write', var.trace_info()[0][1])
 
-        self.frame_index = selected_index + 1
+        # Move the frame, delay, and checkbox variable
+        frame_to_move = self.frames.pop(selected_index)
+        delay_to_move = self.delays.pop(selected_index)
+        var_to_move = self.checkbox_vars.pop(selected_index)
 
+        self.frames.insert(target_index, frame_to_move)
+        self.delays.insert(target_index, delay_to_move)
+        self.checkbox_vars.insert(target_index, var_to_move)
+
+        # Set the moved checkbox and clear the original position
+        var_to_move.set(1)
+
+        # Re-add traces after moving
+        for i, var in enumerate(self.checkbox_vars):
+            var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
+
+        # Update frame index and UI components
+        self.frame_index = target_index
         self.update_frame_list()
         self.show_frame()
+        self.focus_current_frame()
 
     def prompt_and_move_selected_frames(self):
         """Prompt the user for the target position and move the selected frames."""
