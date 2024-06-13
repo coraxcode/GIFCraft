@@ -659,9 +659,22 @@ class GIFEditor:
                 return  # Do nothing if the checkbox for the current frame is not checked
 
             frame = self.frames[self.frame_index]
+            frame_width, frame_height = frame.size
+            preview_width, preview_height = self.image_label.winfo_width(), self.image_label.winfo_height()
 
+            # Check if the cursor is within the preview area
+            if not (0 <= event.x <= preview_width and 0 <= event.y <= preview_height):
+                return
+
+            # Calculate the offsets
             dx = event.x - self.start_x
             dy = event.y - self.start_y
+
+            # Scale offsets to the frame size
+            scale_x = frame_width / preview_width
+            scale_y = frame_height / preview_height
+            dx_scaled = int(dx * scale_x)
+            dy_scaled = int(dy * scale_y)
 
             # Initialize offset attributes if they don't exist
             if not hasattr(frame, 'offset_x'):
@@ -669,8 +682,8 @@ class GIFEditor:
             if not hasattr(frame, 'offset_y'):
                 frame.offset_y = 0
 
-            frame.offset_x += dx
-            frame.offset_y += dy
+            frame.offset_x += dx_scaled
+            frame.offset_y += dy_scaled
 
             # Create a new image with the same size and a transparent background
             new_frame = Image.new("RGBA", frame.size, (0, 0, 0, 0))
