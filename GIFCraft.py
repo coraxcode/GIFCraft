@@ -2971,30 +2971,49 @@ class GIFEditor:
 
     def toggle_transparent_frames_preview(self, event=None):
         """Toggle transparent preview for frames with checked checkboxes."""
+        self.save_state()
+
+        if not any(var.get() for var in self.checkbox_vars):
+            messagebox.showwarning("Preview Mode", "No frame is selected for preview.")
+            self.is_preview_mode = False
+            return
+
+        self.is_preview_mode = not self.is_preview_mode
+
         if self.is_preview_mode:
-            self.exit_preview_mode()
+            if not any(self.checkbox_vars):
+                messagebox.showwarning("Preview Mode", "No frames are checked for preview.")
+                self.is_preview_mode = False
+                return
+
+            self.bind_preview_events()
+            self.show_preview_with_overlay('T')
         else:
-            self.enter_preview_mode()
+            self.unbind_preview_events()
+            self.show_frame()
 
-    def enter_preview_mode(self):
-        """Enter the transparent preview mode."""
-        self.is_preview_mode = True
+    def bind_preview_events(self):
+        """Bind events for preview mode."""
+        self.master.bind_all("<Key>", self.exit_preview_mode)
 
+    def unbind_preview_events(self):
+        """Unbind events for preview mode."""
+        self.master.unbind_all("<Key>")
+
+    def show_preview_with_overlay(self, text):
+        """Display the composite frame with specified text overlay in the upper right corner."""
         if not self.frames:
             messagebox.showinfo("Preview Mode", "No frames available for preview.")
-            self.is_preview_mode = False
             return
 
         checked_indices = [i for i, var in enumerate(self.checkbox_vars) if var.get() == 1]
 
         if not checked_indices:
             messagebox.showinfo("Preview Mode", "No frames are checked for preview.")
-            self.is_preview_mode = False
             return
 
         if checked_indices[0] >= len(self.frames):
             messagebox.showerror("Error", "Checked frame index is out of range.")
-            self.is_preview_mode = False
             return
 
         composite_frame = Image.new("RGBA", self.frames[0].size, (255, 255, 255, 0))
@@ -3013,23 +3032,24 @@ class GIFEditor:
                     frame.putalpha(alpha)
                 composite_frame = Image.alpha_composite(composite_frame, frame)
 
-        draw = ImageDraw.Draw(composite_frame)
+        preview = self.resize_image(composite_frame, max_width=self.preview_width, max_height=self.preview_height)
+        self.draw_overlay_text(preview, text)
+
+        photo = ImageTk.PhotoImage(preview)
+        self.image_label.config(image=photo)
+        self.image_label.image = photo
+
+    def draw_overlay_text(self, image, text):
+        """Draw the specified text on the upper right corner of the image."""
+        draw = ImageDraw.Draw(image)
         font_size = 20
         try:
             font = ImageFont.truetype("arial.ttf", font_size)
         except IOError:
             font = ImageFont.load_default()
-        text = "T"
-        text_position = (composite_frame.width - font_size - 20, 10)
+        text_position = (image.width - font_size - 20, 10)
         text_color = (255, 0, 0, 255)
         draw.text(text_position, text, font=font, fill=text_color)
-
-        preview = self.resize_image(composite_frame, max_width=self.preview_width, max_height=self.preview_height)
-        photo = ImageTk.PhotoImage(preview)
-        self.image_label.config(image=photo)
-        self.image_label.image = photo
-
-        self.master.bind_all("<Key>", self.exit_preview_mode)
 
     def exit_preview_mode(self, event=None):
         """Exit the preview mode and return to normal mode."""
@@ -3037,6 +3057,7 @@ class GIFEditor:
             self.is_preview_mode = False
             self.show_frame()
             self.master.unbind_all("<Key>")
+
 
     def play_next_frame(self):
         """Play the next frame in the animation."""
