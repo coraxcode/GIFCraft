@@ -3,6 +3,7 @@ from tkinter import filedialog, messagebox, simpledialog, ttk, colorchooser
 from tkinter import Menu, Checkbutton, IntVar, Scrollbar, Frame, Canvas
 from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageSequence, ImageEnhance, ImageFilter, ImageColor, ImageOps
 import os
+import math
 import random
 import platform
 import numpy as np
@@ -37,6 +38,7 @@ class GIFEditor:
         self.brush_color = "#000000"
         self.brush_size = 5
         self.tool = 'brush'
+        self.brush_shape = 'circle' 
         self.is_drawing = False
         self.last_x = None
         self.last_y = None
@@ -3073,6 +3075,7 @@ class GIFEditor:
             self.frame_index = (self.frame_index + 1) % len(self.frames)
             self.master.after(delay, self.play_next_frame)
 
+
     def toggle_draw_mode(self, event=None):
         """Toggle draw mode on and off."""
         self.save_state()
@@ -3107,6 +3110,7 @@ class GIFEditor:
         self.master.bind("<Key-2>", self.set_tool_eraser)
         self.master.bind("<Key-3>", self.set_tool_color)
         self.master.bind("<Key-4>", self.prompt_brush_size)
+        self.master.bind("<Key-5>", self.set_tool_eyedropper)
         self.master.bind("<bracketleft>", self.decrease_brush_size)
         self.master.bind("<bracketright>", self.increase_brush_size)
 
@@ -3119,6 +3123,7 @@ class GIFEditor:
         self.master.unbind("<Key-2>")
         self.master.unbind("<Key-3>")
         self.master.unbind("<Key-4>")
+        self.master.unbind("<Key-5>")
         self.master.unbind("<bracketleft>")
         self.master.unbind("<bracketright>")
 
@@ -3153,9 +3158,15 @@ class GIFEditor:
         self.update_frame_list()
 
     def set_tool_brush(self, event=None):
-        """Set the drawing tool to brush and display an infobox."""
+        """Toggle between circular and square brush and display an infobox."""
         self.set_tool('brush')
-        messagebox.showinfo("Tool Selected", "Selected Tool: Brush")
+        if self.brush_shape == 'circle':
+            self.brush_shape = 'square'
+            shape_info = "Square"
+        else:
+            self.brush_shape = 'circle'
+            shape_info = "Circle"
+        messagebox.showinfo("Brush Shape", f"Selected Brush Shape: {shape_info}")
 
     def set_tool_eraser(self, event=None):
         """Set the drawing tool to eraser and display an infobox."""
@@ -3166,6 +3177,11 @@ class GIFEditor:
         """Open color chooser, set brush color, and display an infobox."""
         self.choose_color()
         messagebox.showinfo("Tool Selected", "Selected Tool: Color")
+
+    def set_tool_eyedropper(self, event=None):
+        """Set the drawing tool to eyedropper and display an infobox."""
+        self.set_tool('eyedropper')
+        messagebox.showinfo("Tool Selected", "Selected Tool: Eyedropper")
 
     def prompt_brush_size(self, event=None):
         """Prompt the user to enter the brush size."""
@@ -3187,6 +3203,7 @@ class GIFEditor:
     def set_tool(self, tool):
         """Set the current drawing tool."""
         self.tool = tool
+        self.is_drawing = False  # Reset drawing state to prevent unintended drawing
 
     def choose_color(self):
         """Open a color chooser dialog to select the brush color."""
@@ -3202,8 +3219,12 @@ class GIFEditor:
 
     def start_drawing(self, event):
         """Start drawing on the canvas."""
-        self.is_drawing = True
-        self.last_x, self.last_y = self.scale_coordinates(event.x, event.y)
+        if self.tool != 'eyedropper':  # Avoid starting drawing if the tool is eyedropper
+            self.is_drawing = True
+            self.last_x, self.last_y = self.scale_coordinates(event.x, event.y)
+            self.draw(event)  # Ensure a dot is drawn on click
+        else:
+            self.pick_color(event)
 
     def stop_drawing(self, event):
         """Stop drawing on the canvas."""
@@ -3215,7 +3236,7 @@ class GIFEditor:
             x, y = self.scale_coordinates(event.x, event.y)
             if self.checkbox_vars[self.frame_index].get() == 1:
                 frame = self.frames[self.frame_index].copy()
-                draw = ImageDraw.Draw(frame)
+                draw = ImageDraw.Draw(frame, 'RGBA')
                 if self.tool == 'brush':
                     self.draw_brush(draw, self.last_x, self.last_y, x, y)
                 elif self.tool == 'eraser':
@@ -3225,30 +3246,57 @@ class GIFEditor:
                 self.show_frame_with_overlay()
 
     def draw_brush(self, draw, x1, y1, x2, y2):
-        """Draw a smooth, round brush stroke using anti-aliasing."""
-        from PIL import ImageFilter
-
-        distance = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
-        num_steps = int(distance / self.brush_size) + 1
+        """Draw a smooth brush stroke."""
+        distance = math.hypot(x2 - x1, y2 - y1)
+        num_steps = int(distance / self.brush_size * 2) + 1
         for i in range(num_steps):
             x = x1 + i * (x2 - x1) / num_steps
             y = y1 + i * (y2 - y1) / num_steps
-            draw.ellipse([x - self.brush_size / 2, y - self.brush_size / 2, x + self.brush_size / 2, y + self.brush_size / 2], fill=self.brush_color)
+            if self.brush_shape == 'circle':
+                self._draw_brush_circle(draw, x, y)
+            elif self.brush_shape == 'square':
+                self._draw_brush_square(draw, x, y)
 
-        # Smooth the brush stroke by applying a Gaussian blur filter
-        self.frames[self.frame_index] = self.frames[self.frame_index].filter(ImageFilter.GaussianBlur(radius=self.brush_size / 4))
+        # Apply Gaussian blur for smoothing if using a circle brush
+        if self.brush_shape == 'circle':
+            self.frames[self.frame_index] = self.frames[self.frame_index].filter(ImageFilter.GaussianBlur(radius=self.brush_size / 2))
+
+    def _draw_brush_circle(self, draw, x, y):
+        """Helper function to draw a single brush circle."""
+        radius = self.brush_size / 2
+        if radius <= 0:
+            return
+
+        draw.ellipse([x - radius, y - radius, x + radius, y + radius], fill=self.brush_color)
+
+    def _draw_brush_square(self, draw, x, y):
+        """Helper function to draw a single brush square for pixel art."""
+        half_size = self.brush_size // 2
+        if self.brush_size == 1:
+            draw.point([x, y], fill=self.brush_color)
+        else:
+            draw.rectangle([x - half_size, y - half_size, x + half_size - 1, y + half_size - 1], fill=self.brush_color)
 
     def draw_eraser(self, draw, x1, y1, x2, y2):
         """Draw a smooth, round eraser stroke using anti-aliasing."""
-        distance = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
-        num_steps = int(distance / self.brush_size) + 1
+        distance = math.hypot(x2 - x1, y2 - y1)
+        num_steps = int(distance / self.brush_size * 2) + 1
         for i in range(num_steps):
             x = x1 + i * (x2 - x1) / num_steps
             y = y1 + i * (y2 - y1) / num_steps
             draw.ellipse([x - self.brush_size / 2, y - self.brush_size / 2, x + self.brush_size / 2, y + self.brush_size / 2], fill=(255, 255, 255, 0))
 
-        # Smooth the eraser stroke by applying a Gaussian blur filter
-        self.frames[self.frame_index] = self.frames[self.frame_index].filter(ImageFilter.GaussianBlur(radius=self.brush_size / 4))
+        # Apply Gaussian blur for smoothing
+        self.frames[self.frame_index] = self.frames[self.frame_index].filter(ImageFilter.GaussianBlur(radius=self.brush_size / 2))
+
+    def pick_color(self, event):
+        """Pick color from the canvas and set it as the current brush color."""
+        x, y = self.scale_coordinates(event.x, event.y)
+        frame = self.frames[self.frame_index]
+        pixel = frame.getpixel((x, y))
+        self.brush_color = '#{:02x}{:02x}{:02x}'.format(pixel[0], pixel[1], pixel[2])
+        messagebox.showinfo("Color Picked", f"Selected Color: {self.brush_color}")
+        self.set_tool('brush')  # Switch back to brush tool after picking color
 
     def scale_coordinates(self, x, y):
         """Scale the coordinates based on the current preview resolution."""
