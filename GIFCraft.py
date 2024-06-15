@@ -1737,6 +1737,12 @@ class GIFEditor:
             self.checkbox_vars.insert(insert_index, var)
             insert_index += 1
 
+        # Update the checkboxes to ensure the UI is consistent
+        for i, var in enumerate(self.checkbox_vars):
+            if var.trace_info():
+                var.trace_remove('write', var.trace_info()[0][1])
+            var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
+
         self.update_frame_list()
         self.show_frame()
 
@@ -2918,6 +2924,12 @@ class GIFEditor:
             var.trace_add('write', lambda *args, i=insert_index: self.set_current_frame(i))
             self.checkbox_vars.insert(insert_index, var)
             insert_index += 1
+
+        # Update the checkboxes to ensure the UI is consistent
+        for i, var in enumerate(self.checkbox_vars):
+            if var.trace_info():
+                var.trace_remove('write', var.trace_info()[0][1])
+            var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
 
         self.update_frame_list()
         self.show_frame()
