@@ -5,8 +5,8 @@ from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageSequence, ImageEnhanc
 import os
 import random
 import platform
-import threading
 import numpy as np
+import threading
 import time
 import cv2
 
@@ -191,7 +191,7 @@ class GIFEditor:
         """
         Check if there is any frame with the checkbox marked.
         If not, show a message informing that no checkbox is marked.
-        
+
         Returns:
             bool: True if a frame is selected, False otherwise.
         """
@@ -312,7 +312,7 @@ class GIFEditor:
                     images.append(image)
 
                 images[0].save(
-                    file_path, save_all=True, append_images=images[1:], 
+                    file_path, save_all=True, append_images=images[1:],
                     duration=self.delays, loop=gif_loop_count, disposal=disposal
                 )
                 self.current_file = file_path
@@ -320,7 +320,6 @@ class GIFEditor:
                 messagebox.showinfo("Success", "High-quality GIF saved successfully!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save high-quality GIF: {e}")
-
 
     def extract_video_frames(self):
         """Extract frames from a video file and save them as images with progress tracking and cancel option."""
@@ -466,19 +465,19 @@ class GIFEditor:
                 # Adjust loop count for GIFs: 0 for infinite, 1 for one loop, etc.
                 gif_loop_count = 0 if loop_count == 0 else loop_count
                 self.frames[0].save(
-                    file_path, save_all=True, append_images=self.frames[1:], 
+                    file_path, save_all=True, append_images=self.frames[1:],
                     duration=self.delays, loop=gif_loop_count, disposal=disposal
                 )
             elif ext == 'png':
                 # APNG supports looping directly
                 self.frames[0].save(
-                    file_path, save_all=True, append_images=self.frames[1:], 
+                    file_path, save_all=True, append_images=self.frames[1:],
                     duration=self.delays, loop=loop_count, format='PNG'
                 )
             elif ext == 'webp':
                 # WebP supports looping directly
                 self.frames[0].save(
-                    file_path, save_all=True, append_images=self.frames[1:], 
+                    file_path, save_all=True, append_images=self.frames[1:],
                     duration=self.delays, loop=loop_count, format='WEBP'
                 )
             else:
@@ -563,6 +562,12 @@ class GIFEditor:
             self.checkbox_vars.insert(insert_index, var)
             insert_index += 1
 
+        # Update the checkboxes to ensure the UI is consistent
+        for i, var in enumerate(self.checkbox_vars):
+            if var.trace_info():
+                var.trace_remove('write', var.trace_info()[0][1])
+            var.trace_add('write', lambda *args, i=i: self.set_current_frame(i))
+
         self.update_frame_list()
         self.show_frame()
 
@@ -645,7 +650,7 @@ class GIFEditor:
 
     def move_image_in_frame_list(self):
         """Enable moving images within the currently selected frame using the mouse. Toggle the mode with this function."""
-        
+
         def on_press(event):
             """Store the initial mouse position."""
             self.start_x = event.x
@@ -725,7 +730,7 @@ class GIFEditor:
 
     def move_multiple_frames(self):
         """Enable moving images within the selected frames using the mouse. Toggle the mode with this function."""
-        
+
         def on_press(event):
             """Store the initial mouse position."""
             self.start_x = event.x
@@ -941,17 +946,6 @@ class GIFEditor:
         if target_position is not None:
             self.move_selected_frames(target_position)
 
-    def prompt_and_move_selected_frames(self):
-        """Prompt the user for the target position and move the selected frames."""
-        if not self.frames:
-            messagebox.showerror("Error", "No frames available to move.")
-            return
-
-        target_position = simpledialog.askinteger("Move Frames", "Enter the target position (0-based index):",
-                                                  minvalue=0, maxvalue=len(self.frames) - 1)
-        if target_position is not None:
-            self.move_selected_frames(target_position)
-
     def move_selected_frames(self, target_position):
         """
         Move selected frames to a specific target position.
@@ -1123,7 +1117,7 @@ class GIFEditor:
         def update_font_preview(event=None):
             selected_font_name = font_combobox.get().lower()
             selected_font_path = font_map.get(selected_font_name)
-            
+
             if selected_font_path:
                 try:
                     preview_font = ImageFont.truetype(selected_font_path, 14)
@@ -1373,7 +1367,7 @@ class GIFEditor:
         """
         Add an empty frame with full transparency or a specified color. If there are no frames, prompt for the size of the new frame.
         """
-        
+
         # Define maximum width and height limits
         MAX_WIDTH = 2560
         MAX_HEIGHT = 1600
@@ -1424,7 +1418,7 @@ class GIFEditor:
 
         # Append the new frame to the list of frames
         self.frames.append(new_frame)
-        
+
         # Append a default delay for the new frame
         self.delays.append(100)
 
@@ -2928,6 +2922,7 @@ class GIFEditor:
         self.update_frame_list()
         self.show_frame()
 
+
 # MENU ANIMATION
 
     def toggle_play_pause(self, event=None):
@@ -3057,7 +3052,6 @@ class GIFEditor:
             self.is_preview_mode = False
             self.show_frame()
             self.master.unbind_all("<Key>")
-
 
     def play_next_frame(self):
         """Play the next frame in the animation."""
@@ -3222,7 +3216,7 @@ class GIFEditor:
         """Draw a smooth, round brush stroke using anti-aliasing."""
         from PIL import ImageFilter
 
-        distance = ((x2 - x1)**2 + (y2 - y1)**2)**0.5
+        distance = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
         num_steps = int(distance / self.brush_size) + 1
         for i in range(num_steps):
             x = x1 + i * (x2 - x1) / num_steps
@@ -3234,7 +3228,7 @@ class GIFEditor:
 
     def draw_eraser(self, draw, x1, y1, x2, y2):
         """Draw a smooth, round eraser stroke using anti-aliasing."""
-        distance = ((x2 - x1)**2 + (y2 - y1)**2)**0.5
+        distance = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
         num_steps = int(distance / self.brush_size) + 1
         for i in range(num_steps):
             x = x1 + i * (x2 - x1) / num_steps
@@ -3251,8 +3245,6 @@ class GIFEditor:
         scale_x = original_width / preview_width
         scale_y = original_height / preview_height
         return int(x * scale_x), int(y * scale_y)
-
-# MENU HELP
 
     def show_about(self):
         """Display the About dialog."""
@@ -3478,7 +3470,6 @@ class GIFEditor:
         new_width = int(image.width * ratio)
         new_height = int(image.height * ratio)
         return image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-
 
 if __name__ == "__main__":
     root = tk.Tk()
