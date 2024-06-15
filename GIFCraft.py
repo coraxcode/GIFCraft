@@ -11,7 +11,6 @@ import threading
 import time
 import cv2
 
-
 class GIFEditor:
     def __init__(self, master):
         """Initialize the GIF editor with the main window and UI setup."""
