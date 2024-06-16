@@ -723,6 +723,7 @@ class GIFEditor:
             self.is_move_mode = False
             messagebox.showinfo("Move Image", "Move image mode deactivated.")
         else:
+            self.exit_draw_mode()  # Exit draw mode if active
             self.master.bind("<ButtonPress-1>", on_press)
             self.master.bind("<B1-Motion>", on_motion)
             self.master.bind("<ButtonRelease-1>", on_release)
@@ -804,6 +805,7 @@ class GIFEditor:
             self.is_move_mode_multiple = False
             messagebox.showinfo("Move Images", "Move images mode deactivated.")
         else:
+            self.exit_draw_mode()  # Exit draw mode if active
             self.master.bind("<ButtonPress-1>", on_press)
             self.master.bind("<B1-Motion>", on_motion)
             self.master.bind("<ButtonRelease-1>", on_release)
@@ -3092,10 +3094,35 @@ class GIFEditor:
                 self.is_draw_mode = False
                 return
 
+            self.exit_move_modes()  # Exit any active move modes
             self.bind_drawing_events()
             self.show_frame_with_overlay()
             messagebox.showinfo("Draw Mode", "Entered Draw Mode")
         else:
+            self.unbind_drawing_events()
+            self.show_frame()
+            messagebox.showinfo("Draw Mode", "Exited Draw Mode")
+
+    def exit_move_modes(self):
+        """Exit any active move modes."""
+        if hasattr(self, 'is_move_mode') and self.is_move_mode:
+            self.master.unbind("<ButtonPress-1>")
+            self.master.unbind("<B1-Motion>")
+            self.master.unbind("<ButtonRelease-1>")
+            self.is_move_mode = False
+            messagebox.showinfo("Move Image", "Move image mode deactivated.")
+            
+        if hasattr(self, 'is_move_mode_multiple') and self.is_move_mode_multiple:
+            self.master.unbind("<ButtonPress-1>")
+            self.master.unbind("<B1-Motion>")
+            self.master.unbind("<ButtonRelease-1>")
+            self.is_move_mode_multiple = False
+            messagebox.showinfo("Move Images", "Move images mode deactivated.")
+
+    def exit_draw_mode(self):
+        """Exit draw mode if active."""
+        if self.is_draw_mode:
+            self.is_draw_mode = False
             self.unbind_drawing_events()
             self.show_frame()
             messagebox.showinfo("Draw Mode", "Exited Draw Mode")
